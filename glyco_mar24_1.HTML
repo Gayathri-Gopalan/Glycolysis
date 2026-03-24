@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glycolysis — Interactive Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<style>
+:root{--bg:#0a0e1a;--panel:#111827;--panel2:#1a2235;--border:#2a3550;--accent:#22d3ee;--accent2:#f472b6;--green:#4ade80;--red:#f87171;--amber:#fbbf24;--text:#e2e8f0;--muted:#94a3b8;--font:'DM Sans',sans-serif;--mono:'Space Mono',monospace;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow:auto}
+.welcome-bg{position:fixed;inset:0;background:radial-gradient(ellipse at 30% 40%,#0f2a4a 0%,#0a0e1a 60%);display:flex;align-items:center;justify-content:center}
+.welcome-content{text-align:center;max-width:660px;padding:24px}
+.welcome-title{font-size:68px;font-weight:700;letter-spacing:-3px;line-height:1;margin-bottom:14px}
+.welcome-title span{color:var(--accent)}
+.welcome-sub{color:var(--muted);font-size:19px;margin-bottom:8px}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.mode-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:26px 22px;cursor:pointer;transition:all .25s;text-align:left}
+.mode-card:hover{transform:translateY(-4px)}
+.mc-learn:hover{border-color:#60a5fa}.mc-practice:hover{border-color:#4ade80}.mc-quiz:hover{border-color:#fbbf24}
+.mc-icon{font-size:34px;margin-bottom:12px}.mc-title{font-size:21px;font-weight:700}.mc-desc{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.55}
+.app{display:grid;grid-template-columns:185px 1fr;height:100vh;overflow:hidden}
+.sidebar{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-head{padding:10px 12px;background:var(--panel2);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);transition:color .3s}
+.sb-head.flash{animation:sbFlash .7s ease-out}
+@keyframes sbFlash{0%{color:var(--green);background:rgba(74,222,128,.2);}60%{color:var(--green);}100%{color:var(--muted);background:var(--panel2);}}
+.sb-body{flex:1;overflow-y:auto;padding:6px}
+.sb-body::-webkit-scrollbar{width:3px}.sb-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.tool-item{padding:8px 9px;margin:3px 0;background:var(--panel2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .18s}
+.tool-item:hover:not(.used):not(.disabled){border-color:var(--accent);background:rgba(34,211,238,.06);transform:translateX(2px)}
+.tool-item.selected{border-color:var(--green);background:rgba(74,222,128,.1)}
+.tool-item.highlight{border-color:var(--amber);background:rgba(251,191,36,.1);animation:hPulse 1.2s infinite}
+.tool-item.used{opacity:.25;cursor:not-allowed}
+.tool-item.disabled{opacity:.4;cursor:not-allowed}
+.tool-item.shake{animation:shake .3s}
+.ti-row{display:flex;align-items:center;gap:6px}
+.ti-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ti-name{font-size:13px;font-weight:600}
+.ti-full{font-size:11px;color:var(--muted);margin-top:2px}
+.center{display:flex;flex-direction:column;overflow:hidden}
+.step-banner{background:linear-gradient(90deg,#0c1e38 0%,#0a1628 100%);border-bottom:2px solid var(--accent);padding:12px 20px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.step-num-circle{width:48px;height:48px;border-radius:50%;background:var(--accent);color:#0a0e1a;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.step-main{flex:1;min-width:0}
+.step-title-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.step-title{font-size:19px;font-weight:700;color:#fff}
+.step-enz{font-size:12px;color:var(--muted);font-style:italic}
+.step-rxn{font-size:11px;color:var(--accent);font-family:var(--mono);margin-top:3px;letter-spacing:.3px}
+.step-tags{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.step-tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:4px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.3px}
+.st-neg{background:rgba(248,113,113,.18);color:var(--red);border:1px solid rgba(248,113,113,.35)}
+.st-pos{background:rgba(74,222,128,.18);color:var(--green);border:1px solid rgba(74,222,128,.35)}
+.st-nadh{background:rgba(34,211,238,.18);color:var(--accent);border:1px solid rgba(34,211,238,.35)}
+.st-irrev{background:rgba(251,191,36,.18);color:var(--amber);border:1px solid rgba(251,191,36,.35)}
+.st-reg{background:rgba(244,114,182,.18);color:var(--accent2);border:1px solid rgba(244,114,182,.35)}
+.st-prep{background:rgba(248,113,113,.12);color:#fca5a5;border:1px solid rgba(248,113,113,.25)}
+.st-payoff{background:rgba(74,222,128,.12);color:#86efac;border:1px solid rgba(74,222,128,.25)}
+.energy-bar{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.e-pill{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;display:flex;flex-direction:column;align-items:center;min-width:76px;transition:all .3s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.e-pill.pop{animation:pop .4s ease;border-color:var(--accent)}
+.e-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-transform:uppercase}
+.e-val{font-size:20px;font-weight:700;font-family:var(--mono);line-height:1.2}
+.ev-green{color:var(--green)}.ev-red{color:var(--red)}.ev-cyan{color:var(--accent)}
+.detail-drawer{background:#0a1628;border-bottom:1px solid var(--border);flex-shrink:0;overflow:hidden;transition:max-height .3s ease}
+.detail-drawer.open{max-height:340px;overflow-y:auto}
+.detail-drawer.open::-webkit-scrollbar{width:3px}.detail-drawer.open::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.detail-drawer.closed{max-height:0}
+.detail-inner{padding:10px 20px 14px;display:flex;flex-direction:column;gap:8px}
+.d-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.d-val{font-size:12px;color:var(--text);line-height:1.5}
+.d-note{font-size:11px;color:var(--amber);background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:5px;padding:5px 8px;margin-top:6px;line-height:1.5}
+.drawer-toggle{width:100%;background:rgba(34,211,238,.03);border:none;border-bottom:1px solid var(--border);padding:6px;font-size:11px;color:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;transition:all .2s;font-weight:600}
+.drawer-toggle:hover{color:var(--accent)}
+.pract-strip{background:rgba(251,191,36,.07);border-bottom:1px solid rgba(251,191,36,.25);padding:8px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.pract-strip-steps{display:flex;gap:8px;align-items:center}
+.ps-step{display:flex;align-items:center;gap:5px;font-size:11px}
+.ps-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;font-family:var(--mono)}
+.ps-num.active{background:var(--accent);color:#0a0e1a}.ps-num.done{background:var(--green);color:#0a0e1a}.ps-num.idle{background:var(--panel2);color:var(--muted);border:1px solid var(--border)}
+.ps-text{color:var(--muted)}.ps-text.active{color:var(--text);font-weight:600}
+.ps-arrow{color:var(--border);font-size:11px}
+.pract-instr{flex:1;font-size:12px;font-weight:600;color:var(--amber);text-align:right}
+.pract-attempts{font-size:11px;color:var(--red);margin-left:8px}
+.play-area{flex:1;position:relative;background:radial-gradient(ellipse at 50% 50%,#0d1b2e 0%,#0a0e1a 100%);overflow:hidden;min-height:0}
+.play-area::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(34,211,238,.04) 1px,transparent 1px);background-size:24px 24px;pointer-events:none}
+.play-area svg{position:absolute;inset:0;width:100%;height:100%}
+.progress-bar{background:var(--panel2);border-top:1px solid var(--border);padding:8px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.prog-label{font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:.8px;text-transform:uppercase;flex-shrink:0}
+.prog-dots{display:flex;gap:5px;flex:1}
+.prog-dot{flex:1;height:6px;border-radius:3px;background:var(--border);cursor:pointer;transition:all .3s;position:relative}
+.prog-dot:hover{background:#3a4a6a}
+.prog-dot.done{background:var(--green)}.prog-dot.now{background:var(--amber);animation:dotBlink 1s infinite}
+.prog-dot.irrev::after{content:'';position:absolute;top:-4px;right:1px;width:4px;height:4px;background:var(--red);border-radius:50%}
+.compare-tip{background:rgba(167,139,250,.07);border-top:1px solid rgba(167,139,250,.2);padding:5px 20px;font-size:11px;color:#a78bfa;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.controls{background:var(--panel);border-top:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#0a0e1a}
+.btn.primary:hover:not(:disabled){background:#67e8f9;color:#0a0e1a}
+.btn.danger{border-color:rgba(248,113,113,.4);color:var(--red)}
+.btn.danger:hover:not(:disabled){background:rgba(248,113,113,.1)}
+.hint-ctrl{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);cursor:pointer}
+.hint-ctrl input{accent-color:var(--accent)}
+.toast{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:10px;font-size:12px;font-weight:600;animation:toastIn .3s ease;max-width:340px;text-align:center;pointer-events:none;z-index:100}
+.toast.ok{background:var(--green);color:#0a0e1a}.toast.err{background:var(--red);color:#fff}
+.toast.hint{background:var(--panel2);border:1px solid var(--amber);color:var(--amber);font-size:12px;white-space:normal;max-width:300px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.overlay-box{background:var(--panel);border:1px solid var(--border);border-radius:16px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column}
+.overlay-box::-webkit-scrollbar{width:4px}.overlay-box::-webkit-scrollbar-thumb{background:var(--border)}
+.overlay-head{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--panel);z-index:1;flex-shrink:0}
+.overlay-head h2{font-size:18px;font-weight:700}
+.overlay-close{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px}
+.overlay-close:hover{border-color:var(--red);color:var(--red)}
+.overlay-body{padding:20px 24px;overflow-y:auto}
+.instr-sec{margin-bottom:18px}
+.instr-title{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid rgba(34,211,238,.2)}
+.instr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.instr-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.ic-title{font-size:12px;font-weight:700;margin-bottom:3px}.ic-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.instr-step{display:flex;gap:10px;margin-bottom:9px;align-items:flex-start}
+.isn{width:21px;height:21px;border-radius:50%;background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;font-family:var(--mono)}
+.ist{font-size:11px;color:var(--text);line-height:1.5;padding-top:2px}
+.key-facts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kf{background:var(--panel2);border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.5}
+.kf strong{display:block;color:var(--accent);font-size:11px;margin-bottom:2px}
+.legend-grid{display:flex;flex-direction:column;gap:6px}
+.legend-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.sum-table{width:100%;border-collapse:collapse;font-size:11px}
+.sum-table th{background:var(--panel2);padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.sum-table td{padding:7px 10px;border-bottom:1px solid rgba(42,53,80,.5);color:var(--text);vertical-align:top}
+.sum-table tr:hover td{background:rgba(34,211,238,.03)}
+.sum-table .tag{display:inline-block;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;font-family:var(--mono)}
+.sum-table .irr{background:rgba(251,191,36,.15);color:var(--amber)}
+.sum-table .atp-n{color:var(--red)}.sum-table .atp-p{color:var(--green)}.sum-table .nh{color:var(--accent)}
+.sum-table .prep-row td:first-child{border-left:2px solid rgba(248,113,113,.4)}
+.sum-table .payoff-row td:first-child{border-left:2px solid rgba(74,222,128,.4)}
+.complete-box{background:var(--panel);border:1px solid var(--border);border-radius:16px;max-width:440px;width:100%;padding:28px;text-align:center}
+.complete-title{font-size:26px;font-weight:700;margin-bottom:6px}
+.complete-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+.complete-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.cs{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 6px}
+.cs-val{font-size:22px;font-weight:700;font-family:var(--mono)}.cs-lbl{font-size:8px;color:var(--muted);margin-top:2px}
+.complete-next{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:left;font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7}
+.complete-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.quiz-wrap{display:flex;flex-direction:column;height:100vh;background:var(--bg)}
+.quiz-head{background:var(--panel);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.quiz-head h2{font-size:17px;font-weight:700}
+.qh-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.quiz-body{flex:1;overflow-y:auto;padding:20px;max-width:720px;width:100%;margin:0 auto}
+.quiz-body::-webkit-scrollbar{width:4px}.quiz-body::-webkit-scrollbar-thumb{background:var(--border)}
+.q-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:14px}
+.q-cat{font-size:11px;font-weight:700;color:var(--accent2);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);margin-bottom:4px}
+.q-num{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;font-family:var(--mono);margin-bottom:7px}
+.q-text{font-size:14px;font-weight:600;margin-bottom:13px;line-height:1.5}
+.q-opts{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.q-opt{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;font-size:12px;cursor:pointer;transition:all .18s;text-align:left;display:flex;align-items:center;gap:8px;font-family:var(--font);color:var(--text);width:100%}
+.q-opt:hover:not(.locked){border-color:var(--accent);background:rgba(34,211,238,.06)}
+.q-opt.correct{border-color:var(--green)!important;background:rgba(74,222,128,.1)!important;color:var(--green)!important}
+.q-opt.wrong{border-color:var(--red)!important;background:rgba(248,113,113,.1)!important;color:var(--red)!important}
+.q-opt.locked{cursor:default}
+.q-opt-letter{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.q-exp{margin-top:11px;background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.5}
+.q-exp strong{color:var(--accent)}
+.quiz-score-box{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;text-align:center;margin-bottom:14px}
+.qs-val{font-size:40px;font-weight:700;font-family:var(--mono);color:var(--accent)}
+.qs-lbl{font-size:12px;color:var(--muted);margin-top:4px}
+.score-badge{background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--accent);font-family:var(--mono)}
+.sq-overlay{position:absolute;inset:0;background:rgba(10,14,26,.92);display:flex;align-items:center;justify-content:center;z-index:50}
+.sq-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:22px 26px;max-width:420px;width:90%}
+.sq-tag{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase}
+.sq-q{font-size:14px;font-weight:700;margin-bottom:14px;line-height:1.4}
+.sq-opts{display:flex;flex-direction:column;gap:7px}
+.sq-opt{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:12px;cursor:pointer;transition:all .18s;text-align:left;font-family:var(--font);color:var(--text)}
+.sq-opt:hover:not(.sq-lock){border-color:var(--accent);background:rgba(34,211,238,.06)}
+.sq-opt.sq-right{border-color:var(--green)!important;background:rgba(74,222,128,.12)!important;color:var(--green)!important}
+.sq-opt.sq-wrong{border-color:var(--red)!important;background:rgba(248,113,113,.1)!important;color:var(--red)!important}
+.sq-exp{margin-top:10px;font-size:11px;color:var(--muted);background:rgba(34,211,238,.05);border:1px solid rgba(34,211,238,.15);border-radius:6px;padding:8px 10px;line-height:1.5}
+.streak-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:var(--mono);border:1px solid rgba(74,222,128,.4);background:rgba(74,222,128,.1);color:var(--green)}
+/* Misconception panel */
+.misconception-panel{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.3);border-left:3px solid var(--red);border-radius:8px;padding:8px 12px;margin:0 20px 6px;font-size:11px;color:var(--text);line-height:1.5;flex-shrink:0;display:flex;gap:8px;align-items:flex-start}
+.mp-dismiss{background:none;border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:4px;padding:1px 6px;font-size:11px;cursor:pointer;flex-shrink:0;margin-top:1px}
+.mp-dismiss:hover{background:rgba(248,113,113,.1)}
+@keyframes hPulse{0%,100%{border-color:var(--amber)}50%{border-color:transparent}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes dotBlink{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes floatUp{0%{opacity:1;transform:translate(-50%,-10px)}100%{opacity:0;transform:translate(-50%,-50px)}}
+@keyframes appear{0%{opacity:0;transform:scale(.7)}60%{transform:scale(1.1)}100%{opacity:1;transform:scale(1)}}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 4px var(--accent))}50%{filter:drop-shadow(0 0 10px var(--accent))}}
+@keyframes enzSlide{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.appear{animation:appear .35s ease-out}.glow{animation:glow 2s infinite}.enz-appear{animation:enzSlide .3s ease-out}
+/* FIX 6: selection connector */
+@keyframes connPulse{0%,100%{opacity:.7;stroke-dashoffset:0}50%{opacity:.3;stroke-dashoffset:8}}
+
+/* ═══ MOBILE RESPONSIVE ═══ */
+@media(max-width:700px){
+  body{overflow:auto}
+  .app{display:flex;flex-direction:column;height:auto;min-height:100vh}
+  .sidebar{display:none}
+  .step-banner{padding:8px 12px;gap:8px;flex-wrap:wrap}
+  .step-num-circle{width:36px;height:36px;font-size:15px}
+  .step-title{font-size:14px}
+  .step-rxn{font-size:11px}
+  .energy-bar{gap:4px}
+  .e-pill{min-width:52px;padding:4px 7px}
+  .e-val{font-size:14px}
+  .detail-drawer.open{max-height:300px}
+  .pract-strip{flex-wrap:wrap;gap:5px;padding:5px 10px}
+  .pract-strip-steps{gap:5px}
+  .play-area{height:260px;flex:none;min-height:0}
+  .controls{padding:6px 8px;gap:5px}
+  .btn{padding:5px 9px;font-size:11px}
+  .progress-bar{padding:5px 10px}
+  .compare-tip{padding:4px 10px;font-size:11px}
+  .misconception-panel{margin:0 8px 4px;font-size:11px}
+  .mode-grid{grid-template-columns:1fr}
+  .welcome-title{font-size:40px;letter-spacing:-2px}
+  .welcome-sub{font-size:14px}
+  .instr-grid{grid-template-columns:1fr}
+  .q-opts{grid-template-columns:1fr}
+  .complete-stats{grid-template-columns:repeat(2,1fr)}
+}
+/* Mobile sidebar tabs */
+.mob-tabs{display:none;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
+@media(max-width:700px){.mob-tabs{display:flex}}
+.mob-tab{flex:1;padding:7px 4px;font-size:11px;font-weight:700;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--muted);letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid transparent;transition:all .2s;font-family:var(--font)}
+.mob-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(34,211,238,.04)}
+.mob-panel{display:none;background:var(--panel);border-bottom:1px solid var(--border);overflow-y:auto;flex-shrink:0;max-height:130px}
+.mob-panel.open{display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px}
+.mob-item{padding:3px 8px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;transition:all .15s;white-space:nowrap;font-family:var(--font)}
+.mob-item:hover:not(.used):not(.disabled){border-color:var(--accent);color:var(--accent)}
+.mob-item.selected{border-color:var(--green);background:rgba(74,222,128,.1)}
+.mob-item.highlight{border-color:var(--amber);background:rgba(251,191,36,.1);animation:hPulse 1.2s infinite}
+.mob-item.used{opacity:.25;cursor:not-allowed}
+.mob-item.disabled{opacity:.4;cursor:not-allowed}
+/* Desktop: hide right products panel on small screens */
+@media(max-width:700px){.desktop-products{display:none!important}}
+
+/* ═══ LEVEL TOGGLE ═══ */
+.level-toggle{display:flex;align-items:center;gap:4px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:3px;flex-shrink:0}
+.level-btn{padding:4px 10px;border-radius:5px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s;background:transparent;color:var(--muted);letter-spacing:.3px}
+.level-btn.active-basic{background:#14532d;color:#86efac;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.level-btn.active-adv{background:#1e3a5f;color:#93c5fd;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.adv-badge{display:inline-flex;align-items:center;background:rgba(147,197,253,.1);border:1px solid rgba(147,197,253,.3);color:#93c5fd;font-size:8px;font-weight:700;font-family:var(--mono);padding:1px 6px;border-radius:3px;margin-left:4px;letter-spacing:.5px;vertical-align:middle;white-space:nowrap;transition:all .15s}
+.adv-badge:hover{background:rgba(147,197,253,.25);border-color:rgba(147,197,253,.6);transform:scale(1.06);cursor:pointer}
+.adv-badge:active{transform:scale(.98)}
+.clinical-chip{display:inline-block;background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.3);border-radius:3px;padding:1px 5px;font-size:8px;font-weight:700;color:var(--accent2);font-family:var(--mono);margin-right:3px;vertical-align:middle}
+/* ═══ PRINT ═══ */
+@media print{
+  body{background:#fff!important;color:#000!important;overflow:auto!important}
+  .controls,.progress-bar,.step-banner,.sidebar,.pract-strip,.compare-tip,.drawer-toggle,.misconception-panel,.mobile-tabs{display:none!important}
+  .overlay{position:static!important;background:transparent!important}
+  .overlay-box{max-height:none!important;border:none!important;box-shadow:none!important}
+  .sum-table{font-size:9pt}
+  .sum-table th,.sum-table td{border:1px solid #ccc!important;color:#000!important;background:#fff!important}
+  .print-show{display:block!important}
+}
+
+/* ═══ LIGHT MODE ═══ */
+.light-mode{--bg:#f0f4f8;--panel:#ffffff;--panel2:#e8edf4;--border:#c8d4e3;--accent:#0891b2;--accent2:#db2777;--green:#16a34a;--red:#dc2626;--amber:#d97706;--text:#1e293b;--muted:#64748b;}
+.light-mode .play-area{background:radial-gradient(ellipse at 50% 50%,#e0eaf5 0%,#f0f4f8 100%)}
+.light-mode .play-area::before{background-image:radial-gradient(circle,rgba(8,145,178,.06) 1px,transparent 1px)}
+.light-mode .step-banner{background:linear-gradient(90deg,#dbeafe 0%,#e0f2fe 100%)}
+.light-mode .welcome-bg{background:radial-gradient(ellipse at 30% 40%,#bfdbfe 0%,#f0f4f8 60%)}
+.light-mode .detail-drawer{background:#e8f4fb}
+.light-mode .step-title{color:#1e293b}
+.theme-btn{background:var(--panel2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:var(--font);transition:all .2s}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ═══ PHASE BOUNDARY ═══ */
+.phase-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:2px 7px;border-radius:3px;pointer-events:none}
+.phase-prep{color:#fca5a5;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2)}
+.phase-payoff{color:#86efac;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2)}
+
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+'use strict';
+var h=React.createElement;
+var useState=React.useState,useEffect=React.useEffect,useRef=React.useRef,useMemo=React.useMemo,useCallback=React.useCallback;
+
+/* FIX 5: shuffle hoisted outside component */
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function cx(){return Array.from(arguments).filter(Boolean).join(' ');}
+
+var STEPS=[
+  {id:1,enz:'Hexokinase',prod:'g6p',atp:-1,nadh:0,rev:false,phase:'prep',regulatory:false,
+   title:'Phosphorylation of Glucose',enzFull:'Hexokinase (HK)',subFull:'Glucose',prodFull:'Glucose-6-Phosphate (G6P)',subC:'6C',prodC:'6C',
+   rxn:'Glucose + ATP \u2192 G6P + ADP + H\u207a',
+   detail_basic:'Hexokinase attaches a phosphate group (from ATP) to glucose, producing Glucose-6-Phosphate (G6P). This uses 1 ATP and traps glucose inside the cell — the phosphate charge stops it crossing back through the membrane. This reaction is irreversible: it only goes one way.',
+   detail:'Hexokinase adds a phosphate group from ATP to carbon-6, trapping glucose inside the cell as G6P (the charged phosphate cannot cross the plasma membrane). Irreversible under cellular conditions (standard \u0394G\u00b0\u2032\u202f=\u202f\u221216.7\u202fkJ/mol; cellular \u0394G is more negative). Product-inhibited by G6P. Important tissue distinction: muscle and brain use Hexokinase (low Km ~0.1\u202fmM, product-inhibited by G6P); liver and pancreatic \u03b2-cells use Glucokinase/HK-IV (high Km ~10\u202fmM, NOT product-inhibited), which acts as a glucose sensor at high portal glucose concentrations.',
+   note:'Muscle/brain: Hexokinase (low Km, product-inhibited). Liver/\u03b2-cells: Glucokinase (high Km, not product-inhibited)',
+   misconception:'Hexokinase (not PFK-1) catalyses the FIRST phosphorylation. Note: liver uses Glucokinase (HK-IV) instead \u2014 same reaction, different kinetics. G6P trapping is due to the charged phosphate preventing membrane crossing.',
+   clinical:'<span class=\"clinical-chip\">Type 2 Diabetes / MODY-2</span> Glucokinase mutations impair glucose sensing in \u03b2-cells, reducing insulin secretion \u2014 called MODY-2. <span class=\"clinical-chip\">Warburg effect</span> Cancer cells overexpress HK-II anchored to mitochondria, driving aerobic glycolysis; HK-II inhibitors are under investigation as anti-cancer agents.'},
+  {id:2,enz:'PGI',prod:'f6p',atp:0,nadh:0,rev:true,phase:'prep',regulatory:false,
+   title:'Isomerisation to Fructose-6-P',enzFull:'Phosphoglucose Isomerase (PGI)',subFull:'Glucose-6-Phosphate (G6P)',prodFull:'Fructose-6-Phosphate (F6P)',subC:'6C',prodC:'6C',
+   rxn:'G6P \u21cc F6P',
+   /* FIX 2: retro-aldol Schiff-base geometry */
+   detail_basic:'PGI rearranges the structure of G6P to produce F6P. G6P has its reactive carbonyl group at the end of the chain (C-1); PGI moves it to the second carbon (C-2), changing it from an aldose sugar to a ketose sugar. This small structural change is essential because the next enzyme (PFK-1) and the enzyme after that (Aldolase) can only work with the ketose form. No energy is used or released.',
+   detail:'PGI shifts the carbonyl from C-1 to C-2, converting the aldose G6P to the ketose F6P. Three reasons this matters: (1) PFK-1 cannot phosphorylate an aldose, so the C-2 ketone is mandatory before step 3; (2) Aldolase uses a Schiff-base (imine) mechanism \u2014 its active-site lysine condenses with the C-2 keto group of F1,6BP to form an imine intermediate, positioning C3\u2013C4 for retro-aldol cleavage; an aldose cannot form this imine at C-2, making cleavage impossible without PGI; (3) the ketose geometry places both phosphate groups optimally for the retro-aldol mechanism to yield two symmetric trioses.',
+   note:'The C-2 ketone form is required for the next two steps: PFK-1 (step 3) can only phosphorylate a ketose, and Aldolase (step 4) can only cleave a ketose',
+   misconception:'PGI only rearranges atoms within the same molecule \u2014 no phosphate added or removed. Without the C-2 ketone, Aldolase cannot form its Schiff-base intermediate.',
+   clinical:'<span class=\"clinical-chip\">PGI Deficiency</span> Causes non-spherocytic haemolytic anaemia \u2014 red blood cells depend entirely on glycolysis for ATP. G6P accumulates and product-inhibits Hexokinase, worsening the energy deficit. <span class=\"clinical-chip\">Metastasis</span> Secreted PGI/AMF (autocrine motility factor) acts as a cytokine stimulating tumour cell migration.'},
+  {id:3,enz:'PFK-1',prod:'f16bp',atp:-1,nadh:0,rev:false,phase:'prep',regulatory:true,
+   title:'Committed Step \u2014 PFK-1',enzFull:'Phosphofructokinase-1 (PFK-1)',subFull:'Fructose-6-Phosphate (F6P)',prodFull:'Fructose-1,6-Bisphosphate (F1,6BP)',subC:'6C',prodC:'6C',
+   rxn:'F6P + ATP \u2192 F1,6BP + ADP + H\u207a',
+   detail_basic:'PFK-1 adds a second phosphate group to F6P, using 1 ATP, to produce Fructose-1,6-Bisphosphate. This is the most important control point in glycolysis — once this step happens, the cell is fully committed to glycolysis. When the cell has plenty of ATP, PFK-1 is switched off. When ATP is being used up, a molecule called AMP accumulates and switches PFK-1 back on, speeding up glycolysis to make more energy.',
+   detail:'Key regulatory step. PFK-1 is allosterically inhibited by ATP and citrate (high energy) and activated by AMP (primary signal \u2014 reflects very low energy state), ADP, and F2,6BP (most potent activator, under hormonal control via PFK-2). AMP is the dominant adenine nucleotide activator because its concentration rises sharply when ATP falls. Standard \u0394G\u00b0\u2032\u202f=\u202f\u221214.2\u202fkJ/mol; cellular \u0394G is considerably more negative (~\u221225 to \u221238\u202fkJ/mol), making reversal negligible under physiological conditions, though fructose-1,6-bisphosphatase can hydrolyse F1,6BP in gluconeogenesis.',
+   note:'Rate-limiting; inhibited by ATP/citrate; AMP = primary activator; F2,6BP = most potent (hormonal)',
+   misconception:'PFK-1 \u2014 not Hexokinase \u2014 is the rate-limiting committed step. Irreversibility is thermodynamic under cellular conditions, not an absolute chemical impossibility.',
+   clinical:'<span class=\"clinical-chip\">Tarui Disease (GSD VII)</span> PFK-1 muscle-isoform deficiency causes exercise intolerance and haemolysis \u2014 muscles cannot meet ATP demand during exertion. <span class=\"clinical-chip\">Cancer</span> F2,6BP is elevated by RAS/PI3K oncogenic signalling, constitutively activating PFK-1. PFK-2/PFKFB3 is a therapeutic target in several cancers.'},
+  {id:4,enz:'Aldolase',prod:'dhap_g3p',atp:0,nadh:0,rev:false,phase:'prep',regulatory:false,
+   title:'Cleavage to Two Trioses',enzFull:'Aldolase',subFull:'Fructose-1,6-Bisphosphate (F1,6BP)',prodFull:'DHAP + Glyceraldehyde-3-P',subC:'6C',prodC:'3C+3C',
+   rxn:'F1,6BP \u21cc DHAP + G3P',
+   detail_basic:'Aldolase splits the 6-carbon Fructose-1,6-Bisphosphate into two different 3-carbon molecules: Glyceraldehyde-3-Phosphate (G3P) and Dihydroxyacetone Phosphate (DHAP). Only G3P can directly continue to the next steps; DHAP needs to be converted first (step 5). No ATP is used or made here.',
+   detail:'Aldolase cleaves the C3\u2013C4 bond of F1,6BP to produce DHAP (C1\u2013C3) and G3P (C4\u2013C6). Only G3P directly enters the pay-off phase; DHAP must first be converted by TPI (step 5). All subsequent ATP/NADH yields are \u00d72 per glucose once TPI acts.',
+   note:'6C \u2192 3C + 3C; treated as irreversible in vivo (strongly forward due to product removal by TPI/GAPDH); \u00d72 yields after TPI (step 5)',
+   misconception:'Aldolase cleaves the molecule \u2014 it does NOT add or remove phosphate. Products carry the original phosphates from steps 1 and 3. Although \u0394G\u00b0\u2032 is mildly positive, in the cell continuous product removal by TPI and GAPDH makes this reaction effectively irreversible.',
+   clinical:'<span class=\"clinical-chip\">Hereditary Fructose Intolerance</span> Aldolase B (liver isoform) deficiency causes fructose-1-phosphate accumulation, which sequesters phosphate and inhibits HK/PFK-1 \u2014 causing hypoglycaemia, liver failure, and death if dietary fructose is not eliminated. <span class=\"clinical-chip\">Aldolase A deficiency</span> causes haemolytic anaemia and myopathy.'},
+  {id:5,enz:'TPI',prod:'g3p_x2',atp:0,nadh:0,rev:true,phase:'prep',regulatory:false,
+   title:'Interconversion of Trioses',enzFull:'Triose Phosphate Isomerase (TPI)',subFull:'DHAP',prodFull:'Glyceraldehyde-3-P (G3P)',subC:'3C',prodC:'3C',
+   rxn:'DHAP \u21cc G3P',
+   detail_basic:'TPI converts DHAP (from step 4) into G3P, so both 3-carbon halves from the previous step can continue through glycolysis. Without TPI, only half the glucose would produce energy. After this step, 2 molecules of G3P are ready to enter the energy-releasing steps (steps 6\u201310). This is the last step of the preparatory phase.',
+   detail:'TPI is a catalytically perfect enzyme (k_cat/K_M\u202f\u2248\u202f10\u2078\u202fM\u207b\u00b9s\u207b\u00b9, near diffusion limit). It converts DHAP to G3P so both triose halves enter the energy-releasing steps. Equilibrium favours DHAP (~96%), but GAPDH continuously removes G3P, pulling the reaction forward by Le Chatelier\'s principle.',
+   note:'Near-perfect enzyme; both triose halves enter the pay-off phase; last preparatory step',
+   misconception:'Without TPI the DHAP half is wasted. TPI enables 100% of glucose carbon to yield energy.',
+   clinical:'<span class=\"clinical-chip\">TPI Deficiency</span> One of the most severe glycolytic disorders \u2014 causes haemolytic anaemia, progressive neurodegeneration, and recurrent infections. DHAP accumulates and is converted to methylglyoxal, a toxic by-product causing protein glycation. Most affected children die before age 6. <span class=\"clinical-chip\">Drug target</span> TPI inhibition is explored as an anti-parasitic strategy (Trypanosoma).'},
+  {id:6,enz:'GAPDH',prod:'bpg13',atp:0,nadh:2,rev:true,phase:'payoff',regulatory:false,
+   title:'Oxidation and Phosphorylation',enzFull:'Glyceraldehyde-3-P Dehydrogenase (GAPDH)',subFull:'2 \u00d7 G3P',prodFull:'2 \u00d7 1,3-Bisphosphoglycerate (1,3-BPG)',subC:'3C\u00d72',prodC:'3C\u00d72',
+   rxn:'2 G3P + 2 NAD\u207a + 2 P\u1d62 \u21cc 2 (1,3-BPG) + 2 NADH + 2 H\u207a',
+   detail_basic:'GAPDH oxidises G3P by removing a hydride (H⁻ — a hydrogen with two electrons) from the molecule. This is transferred to NAD⁺, converting it to NADH. At the same time, a phosphate from the cell fluid (not from ATP) is added, forming 1,3-BPG. Because we have 2 G3P molecules, this produces 2 NADH in total. NADH carries energy that will be used later in cellular respiration to make more ATP. This is the only step in glycolysis where oxidation occurs.',
+   detail:'The only oxidation (redox) step in glycolysis. GAPDH simultaneously oxidises G3P (reducing NAD\u207a to NADH) and adds free inorganic phosphate (P\u1d62, not ATP) to create a high-energy acyl-phosphate in 1,3-BPG. Two G3P per glucose \u2192 2 NADH total. Each cytoplasmic NADH yields approximately 2.5 ATP via the electron transport chain (malate\u2013aspartate shuttle; P/O ratio \u22480.9 per 3 pumping sites).',
+   note:'Uses free P\u1d62, not ATP; only redox step; 2 cytoplasmic NADH produced',
+   misconception:'GAPDH uses FREE inorganic phosphate (P\u1d62), not ATP. This is the only oxidation step. NADH produced is cytoplasmic.',
+   clinical:'<span class=\"clinical-chip\">Exercise / lactic acidosis</span> At high intensity, ETC cannot reoxidise NADH fast enough \u2014 lactate dehydrogenase regenerates NAD\u207a instead, producing lactate. Lactate acidosis in sepsis or ischaemia signals GAPDH is being overwhelmed. <span class=\"clinical-chip\">Arsenic poisoning</span> Arsenate substitutes for P\u1d62, forming an unstable product that hydrolyses without making ATP \u2014 uncoupling glycolysis from energy production.'},
+  {id:7,enz:'PGK',prod:'pg3',atp:2,nadh:0,rev:true,phase:'payoff',regulatory:false,
+   title:'First ATP Payoff',enzFull:'Phosphoglycerate Kinase (PGK)',subFull:'2 \u00d7 1,3-Bisphosphoglycerate',prodFull:'2 \u00d7 3-Phosphoglycerate (3-PG)',subC:'3C\u00d72',prodC:'3C\u00d72',
+   rxn:'2 (1,3-BPG) + 2 ADP \u2192 2 (3-PG) + 2 ATP',
+   detail_basic:'PGK transfers the phosphate group from 1,3-BPG directly onto ADP, making ATP. This is called substrate-level phosphorylation \u2014 ATP is made directly without the mitochondria. Two ATP are made here (one per G3P), recovering exactly the 2 ATP spent in steps 1 and 3. At this point the net ATP balance is zero \u2014 but the real profit comes at step 10.',
+   detail:'First ATP payoff via substrate-level phosphorylation \u2014 the acyl-phosphate of 1,3-BPG transferred directly to ADP. Generates 2 ATP (1 per triose), exactly recouping the 2 ATP invested in steps 1 and 3 (net = 0). The actual +2 profit comes from Pyruvate Kinase at step 10.',
+   note:'Substrate-level phosphorylation; 2 ATP produced; net balance = 0 here; profit at step 10',
+   misconception:'PGK produces ATP by direct phosphate transfer \u2014 fundamentally different from mitochondrial ATP synthase.',
+   clinical:'<span class=\"clinical-chip\">PGK-1 Deficiency (X-linked)</span> Causes haemolytic anaemia and myopathy; CNS involvement (seizures, intellectual disability) in severe cases. One of the most common glycolytic enzyme deficiencies. <span class=\"clinical-chip\">PGK-2</span> is exclusively expressed in spermatids \u2014 PGK-2 deficiency causes male infertility. 1,3-BPG accumulation is the diagnostic biomarker.'},
+  {id:8,enz:'PGM',prod:'pg2',atp:0,nadh:0,rev:true,phase:'payoff',regulatory:false,
+   title:'Phosphate Migration',enzFull:'Phosphoglycerate Mutase (PGM)',subFull:'2 \u00d7 3-Phosphoglycerate (3-PG)',prodFull:'2 \u00d7 2-Phosphoglycerate (2-PG)',subC:'3C\u00d72',prodC:'3C\u00d72',
+   rxn:'2 (3-PG) \u21cc 2 (2-PG)',
+   detail_basic:'PGM moves the phosphate group from carbon-3 to carbon-2 of the same molecule. No energy is gained or lost. This repositioning is needed so the next enzyme (Enolase) can act on the molecule.',
+   detail:'PGM moves the phosphate group from C-3 to C-2. This repositioning is essential: the phosphate must be on C-2 so Enolase can dehydrate the adjacent C-3 hydroxyl, creating the very high-energy phosphate bond of PEP. PGM requires 2,3-bisphosphoglycerate (2,3-BPG) as a catalytic cofactor \u2014 it donates its C-2 phosphate to the substrate and transiently forms a phospho-enzyme intermediate. This makes 2,3-BPG physiologically important beyond its well-known role in red blood cells as an allosteric regulator of haemoglobin oxygen affinity.',
+   note:'Mutase: phosphate moves C-3 \u2192 C-2 within same molecule; uses 2,3-BPG as cofactor; no net energy change',
+   misconception:"PGM is a 'mutase' \u2014 it moves phosphate within the same molecule. It is NOT a simple isomerisation; it requires 2,3-BPG as a cofactor and proceeds via a phospho-enzyme intermediate.",
+   clinical:'<span class=\"clinical-chip\">Altitude / Anaemia</span> The Luebering-Rapoport shunt in RBCs produces 2,3-BPG from 1,3-BPG (bypassing PGK). Elevated 2,3-BPG right-shifts the O\u2082 dissociation curve, aiding O\u2082 delivery to tissues at altitude. <span class=\"clinical-chip\">Stored blood</span> Banked blood depletes 2,3-BPG after ~1 week, reducing O\u2082 delivery \u2014 relevant for massive transfusion. <span class=\"clinical-chip\">Sickle cell</span> Elevated 2,3-BPG reduces HbS-O\u2082 affinity, facilitating sickling.'},
+  {id:9,enz:'Enolase',prod:'pep',atp:0,nadh:0,rev:true,phase:'payoff',regulatory:false,
+   title:'Dehydration to PEP',enzFull:'Enolase',subFull:'2 \u00d7 2-Phosphoglycerate (2-PG)',prodFull:'2 \u00d7 Phosphoenolpyruvate (PEP)',subC:'3C\u00d72',prodC:'3C\u00d72',
+   rxn:'2 (2-PG) \u21cc 2 PEP + 2 H\u2082O',
+   detail_basic:'Enolase removes a water molecule from 2-Phosphoglycerate to produce PEP. PEP holds its phosphate with very high energy, ready to donate it in the final step. This is a dehydration reaction — water is removed.',
+   detail:'Enolase removes water (dehydration) to create PEP, which has the highest phosphate transfer potential of any common metabolite (\u0394G\u00b0\u2032\u202f=\u202f\u221261.9\u202fkJ/mol for PEP hydrolysis). Requires Mg\u00b2\u207a. Inhibited by fluoride: F\u207b\u202f+\u202fP\u1d62 form fluorophosphate (PO\u2082F\u00b2\u207b), which chelates Mg\u00b2\u207a and blocks catalysis. Hence NaF in blood collection tubes halts glycolysis.',
+   note:'Dehydration reaction; PEP has the highest phosphate transfer potential; inhibited by fluoride (NaF used in blood collection tubes to halt glycolysis)',
+   misconception:'Enolase removes H\u2082O. F\u207b inhibition is indirect: fluorophosphate chelates Mg\u00b2\u207a, removing the required cofactor.',
+   clinical:'<span class=\"clinical-chip\">Blood collection (NaF tubes)</span> Grey-top tubes contain NaF to block Enolase, preserving blood glucose for up to 48h at room temperature \u2014 critical for accurate glucose measurements. <span class=\"clinical-chip\">NSE biomarker</span> Neuron-specific enolase (NSE/ENO2) is released from damaged neurons \u2014 serum NSE is used to assess traumatic brain injury severity, stroke, and cardiac arrest neurological outcome. Also a tumour marker for small-cell lung cancer and neuroblastoma.'},
+  {id:10,enz:'PK',prod:'pyruvate',atp:2,nadh:0,rev:false,phase:'payoff',regulatory:false,
+   title:'Final ATP Generation',enzFull:'Pyruvate Kinase (PK)',subFull:'2 \u00d7 Phosphoenolpyruvate (PEP)',prodFull:'2 \u00d7 Pyruvic acid',subC:'3C\u00d72',prodC:'3C\u00d72',
+   rxn:'2 PEP + 2 ADP \u2192 2 Pyruvic acid + 2 ATP',
+   detail_basic:'Pyruvate Kinase transfers the phosphate from PEP to ADP, making ATP and Pyruvic acid. This is the last step of glycolysis. Because there are 2 PEP molecules, 2 ATP are made — the net profit of glycolysis. Pyruvic acid then enters the Krebs cycle (with oxygen) or fermentation (without oxygen).',
+   detail:'Final irreversible step (standard \u0394G\u00b0\u2032\u202f=\u202f\u221231.4\u202fkJ/mol). Pyruvate Kinase transfers the phosphate from PEP to ADP (substrate-level phosphorylation), generating 2 ATP. Allosterically activated by F1,6BP (feed-forward activation from PFK-1 coordinates both phases). Pyruvic acid enters the Krebs cycle (aerobic) or fermentation (anaerobic).',
+   note:'Irreversible; feed-forward activation by F1,6BP; pyruvic acid \u2192 Krebs cycle (aerobic) or fermentation (anaerobic)',
+   misconception:"Pyruvate Kinase MAKES ATP \u2014 it does NOT use it. 'Kinase' here means transferring phosphate TO ADP.",
+   clinical:'<span class=\"clinical-chip\">PK Deficiency</span> Most common glycolytic enzyme deficiency; autosomal recessive. RBCs cannot maintain ATP for Na\u207a/K\u207a-ATPase \u2192 cell swells and is haemolysed. Treatment: luspatercept, mitapivat (small-molecule PK activator, FDA approved 2022). <span class=\"clinical-chip\">PKM2 &amp; Cancer</span> The PKM2 isoform has lower catalytic activity and is expressed in cancer cells. This slower final step causes upstream glycolytic intermediates to accumulate, redirecting them into biosynthetic pathways (nucleotides, amino acids) needed for rapid cell proliferation.'}
+];
+
+var MOLS={
+  glucose:{ab:'Glucose',fn:'Glucose',c:'6C',col:'#3b82f6'},g6p:{ab:'G6P',fn:'Glucose-6-Phosphate',c:'6C',col:'#8b5cf6'},
+  f6p:{ab:'F6P',fn:'Fructose-6-Phosphate',c:'6C',col:'#06b6d4'},f16bp:{ab:'F1,6BP',fn:'Fructose-1,6-Bisphosphate',c:'6C',col:'#f97316'},
+  dhap_g3p:{ab:'DHAP+G3P',fn:'DHAP + Glyceraldehyde-3-P',c:'3C+3C',col:'#84cc16'},g3p_x2:{ab:'2\u00d7G3P',fn:'2\u00d7 Glyceraldehyde-3-P',c:'3C\u00d72',col:'#22c55e'},
+  bpg13:{ab:'1,3-BPG',fn:'1,3-Bisphosphoglycerate',c:'3C\u00d72',col:'#a855f7'},pg3:{ab:'3-PG',fn:'3-Phosphoglycerate',c:'3C\u00d72',col:'#2563eb'},
+  pg2:{ab:'2-PG',fn:'2-Phosphoglycerate',c:'3C\u00d72',col:'#0284c7'},pep:{ab:'PEP',fn:'Phosphoenolpyruvate',c:'3C\u00d72',col:'#dc2626'},
+  pyruvate:{ab:'Pyruvic acid',fn:'Pyruvic acid',c:'3C\u00d72',col:'#be185d'}
+};
+var ENZS={'Hexokinase':{fn:'Hexokinase',col:'#f9a8d4'},'PGI':{fn:'Phosphoglucose Isomerase',col:'#c4b5fd'},'PFK-1':{fn:'Phosphofructokinase-1',col:'#93c5fd'},'Aldolase':{fn:'Aldolase',col:'#6ee7b7'},'TPI':{fn:'Triose Phosphate Isomerase',col:'#fde68a'},'GAPDH':{fn:'Glyceraldehyde-3-P Dehydrogenase',col:'#a5b4fc'},'PGK':{fn:'Phosphoglycerate Kinase',col:'#86efac'},'PGM':{fn:'Phosphoglycerate Mutase',col:'#fed7aa'},'Enolase':{fn:'Enolase',col:'#67e8f9'},'PK':{fn:'Pyruvate Kinase',col:'#fca5a5'}};
+var L={1:{sx:52,sy:45,px:118,py:45,ex:84,ey:62},2:{sx:118,sy:45,px:183,py:45,ex:150,ey:62},3:{sx:183,sy:45,px:252,py:45,ex:217,ey:62},4:{sx:252,sy:45,px:322,py:122,ex:297,ey:83,vert:true},5:{sx:322,sy:122,px:262,py:122,ex:292,ey:139},6:{sx:262,sy:122,px:197,py:122,ex:229,ey:139},7:{sx:197,sy:122,px:122,py:122,ex:159,ey:139},8:{sx:122,sy:122,px:52,py:192,ex:72,ey:157,vert:true},9:{sx:52,sy:192,px:132,py:192,ex:92,ey:208},10:{sx:132,sy:192,px:212,py:192,ex:172,ey:208}};
+
+var QUIZ=[
+  {id:1,cat:'Enzymes',q:'Which of the following is the first enzyme of glycolysis?',opts:['Phosphoglucose isomerase','Hexokinase','Phosphofructokinase-1','Enolase'],ans:1,exp:'Hexokinase (step 1) phosphorylates glucose to G6P using one ATP.'},
+  {id:2,cat:'Energy',q:'The net gain of ATP molecules per glucose molecule during glycolysis is:',opts:['8','4','2','38'],ans:2,exp:'Glycolysis invests 2 ATP (steps 1 and 3) and produces 4 ATP (steps 7 and 10). Net = 2.'},
+  {id:3,cat:'Enzymes',q:'Which enzyme catalyses the irreversible, rate-limiting step of glycolysis?',opts:['Hexokinase','Pyruvate Kinase','Phosphofructokinase-1 (PFK-1)','Enolase'],ans:2,exp:'PFK-1 (step 3) is both the committed step (the point of no return \u2014 once F1,6BP is made, the cell is fully committed to completing glycolysis) and the rate-limiting step (it is the slowest step and controls the overall speed of glycolysis). It is regulated by ATP, AMP, and F2,6BP.'},
+  {id:4,cat:'Coenzymes',q:'The enzyme that produces NADH during glycolysis is:',opts:['Pyruvate kinase','Phosphoglycerate kinase','GAPDH','Enolase'],ans:2,exp:'GAPDH (step 6) is the only enzyme in glycolysis that produces NADH.'},
+  {id:5,cat:'Substrates & Products',q:'The substrate of Aldolase in glycolysis is:',opts:['Glucose-6-phosphate','Fructose-6-phosphate','Fructose-1,6-bisphosphate','Glyceraldehyde-3-phosphate'],ans:2,exp:'Aldolase (step 4) cleaves fructose-1,6-bisphosphate into DHAP and G3P.'},
+  {id:6,cat:'Substrates & Products',q:'The end product of glycolysis under aerobic conditions is:',opts:['Lactic acid','Ethanol','Pyruvic acid','Acetyl-CoA'],ans:2,exp:'Glycolysis produces pyruvic acid. Under aerobic conditions, pyruvic acid is transported into the mitochondrial matrix where the pyruvate dehydrogenase complex converts it to acetyl-CoA, which then enters the Krebs cycle. Acetyl-CoA is not a direct product of glycolysis.'},
+  {id:7,cat:'Steps & Sequence',q:'How many ATP molecules are consumed during the preparatory phase of glycolysis?',opts:['1','2','3','4'],ans:1,exp:'Two ATP molecules consumed: one by Hexokinase (step 1) and one by PFK-1 (step 3).'},
+  {id:8,cat:'Steps & Sequence',q:'Which steps involve substrate-level phosphorylation?',opts:['Steps 1 and 3','Steps 6 and 9','Steps 7 and 10','Steps 2 and 5'],ans:2,exp:'Substrate-level phosphorylation (direct phosphate transfer to ADP) occurs at step 7 (PGK, makes 2 ATP) and step 10 (Pyruvate Kinase, makes 2 ATP). Together they produce 4 ATP gross. Subtract the 2 ATP invested in steps 1 and 3 \u2014 net gain = 2 ATP per glucose.'},
+  {id:9,cat:'Enzymes',q:'Pyruvate Kinase transfers phosphate from PEP to ADP. This is called:',opts:['Oxidative phosphorylation','Photophosphorylation','Substrate-level phosphorylation','Chemiosmotic phosphorylation'],ans:2,exp:'Pyruvate Kinase (step 10) directly transfers the phosphate without the electron transport chain \u2014 substrate-level phosphorylation.'},
+  {id:10,cat:'Reactions',q:'The conversion of 2-phosphoglycerate to PEP involves:',opts:['Phosphorylation','Dehydration','Oxidation','Isomerisation'],ans:1,exp:'Enolase (step 9) removes water (dehydration) to form PEP.'},
+  {id:11,cat:'Reactions',q:'Under anaerobic conditions, pyruvic acid \u2192 lactic acid. The purpose is to:',opts:['Produce more ATP','Generate CO\u2082','Regenerate NAD\u207a for continued glycolysis','Produce acetyl-CoA'],ans:2,exp:'The purpose is to regenerate NAD\u207a. GAPDH (step 6) needs NAD\u207a as an electron acceptor \u2014 without it, glycolysis halts. Lactate dehydrogenase (LDH) oxidises NADH by transferring a hydride to pyruvic acid, reducing it to lactic acid and regenerating NAD\u207a so glycolysis can continue.'},
+  {id:12,cat:'Coenzymes',q:'Which molecule acts as phosphate donor in the Hexokinase reaction?',opts:['Inorganic phosphate (Pi)','NADH','ATP','GTP'],ans:2,exp:'Hexokinase transfers the terminal phosphate from ATP to glucose, producing G6P and ADP.'}
+];
+
+var STEP_QUIZ={
+  1:{q:'What is the product of Step 1 (Hexokinase)?',opts:['Fructose-6-Phosphate','Glucose-6-Phosphate','Fructose-1,6-Bisphosphate','Pyruvic acid'],ans:1,exp:'Hexokinase phosphorylates glucose at C-6 using one ATP, producing G6P. The phosphate traps glucose inside the cell.'},
+  3:{q:'Which molecule is produced by PFK-1 in Step 3?',opts:['G6P','F6P','Fructose-1,6-Bisphosphate','DHAP'],ans:2,exp:'PFK-1 adds a second phosphate to F6P, producing F1,6BP \u2014 the committed step.'},
+  6:{q:'What does GAPDH produce in Step 6?',opts:['ATP','Pyruvic acid','1,3-BPG and NADH','G3P and NADPH'],ans:2,exp:'GAPDH oxidises G3P and adds inorganic phosphate to form 1,3-BPG, reducing NAD\u207a to NADH \u2014 the only oxidation step.'},
+
+  10:{q:'What are the products of Pyruvate Kinase (Step 10)?',opts:['2 ATP and 2 Pyruvic acid (per glucose)','ADP and PEP','NADH and Pyruvic acid','ATP and Lactate'],ans:0,exp:'Pyruvate Kinase (step 10) transfers phosphate from PEP to ADP, producing 2 ATP and 2 molecules of Pyruvic acid per glucose — the final product of glycolysis.'}
+};
+
+function mkArrow(s,l,op){op=op===undefined?1:op;var x1,y1,x2,y2;if(s===8){x1=l.sx-10;y1=l.sy+10;x2=l.px+10;y2=l.py-10;}else if(l.vert){x1=l.sx+12;y1=l.sy+10;x2=l.px-12;y2=l.py-10;}else if(s<=3||s>=9){x1=l.sx+14;y1=l.sy;x2=l.px-14;y2=l.py;}else{x1=l.sx-14;y1=l.sy;x2=l.px+14;y2=l.py;}return h('line',{x1:x1,y1:y1,x2:x2,y2:y2,stroke:'#fbbf24',strokeWidth:1.8,markerEnd:'url(#ar)',opacity:op});}
+
+function Mol(p){var m=MOLS[p.type];if(!m)return null;var cls=p.cls||'';var isHex=['glucose','g6p','f6p','f16bp'].indexOf(p.type)>=0;if(isHex){var p1=['g6p','f6p','f16bp'].indexOf(p.type)>=0,p2=p.type==='f16bp';var dots=[0,1,2,3,4,5].map(function(i){var a=(i*60-90)*Math.PI/180;return h('circle',{key:i,cx:Math.cos(a)*5.5,cy:Math.sin(a)*5.5,r:1.8,fill:'rgba(255,255,255,0.6)'});});var ch=[h('polygon',{points:'0,-9 8,-4.5 8,4.5 0,9 -8,4.5 -8,-4.5',fill:m.col,stroke:'rgba(255,255,255,0.3)',strokeWidth:1,opacity:0.9})].concat(dots);if(p1)ch.push(h('circle',{key:'p1',cx:-11,cy:-4,r:3,fill:'#fbbf24',stroke:'#d97706',strokeWidth:0.5}));if(p2)ch.push(h('circle',{key:'p2',cx:11,cy:-4,r:3,fill:'#fbbf24',stroke:'#d97706',strokeWidth:0.5}));return h('g',{transform:'translate('+p.x+','+p.y+')',className:cls},ch);}
+var isSim=p.type==='pyruvate';function chain(ox,hp){hp=hp!==false;var circ=[-4,0,4].map(function(cy){return h('circle',{key:cy,cx:0,cy:cy,r:1.8,fill:m.col,stroke:'rgba(255,255,255,0.4)',strokeWidth:0.5});});var c2=[h('line',{x1:0,y1:-5,x2:0,y2:5,stroke:'rgba(255,255,255,0.4)',strokeWidth:1.2})].concat(circ);if(hp&&!isSim)c2.push(h('circle',{key:'ph',cx:4,cy:5,r:2.2,fill:'#fbbf24',stroke:'#d97706',strokeWidth:0.4}));return h('g',{transform:'translate('+ox+',0)'},c2);}
+if(p.type==='dhap_g3p'){return h('g',{transform:'translate('+p.x+','+p.y+')',className:cls},h('rect',{x:-11,y:-8,width:9,height:16,rx:2,fill:'#eab308',stroke:'rgba(255,255,255,0.3)',strokeWidth:0.6,opacity:0.85}),h('rect',{x:2,y:-8,width:9,height:16,rx:2,fill:'#22c55e',stroke:'rgba(255,255,255,0.3)',strokeWidth:0.6,opacity:0.85}),chain(-6.5,true),chain(6.5,true));}
+return h('g',{transform:'translate('+p.x+','+p.y+')',className:cls},h('rect',{x:-11,y:-8,width:9,height:16,rx:2,fill:m.col,stroke:'rgba(255,255,255,0.2)',strokeWidth:0.6,opacity:0.6}),h('rect',{x:2,y:-8,width:9,height:16,rx:2,fill:m.col,stroke:'rgba(255,255,255,0.2)',strokeWidth:0.6,opacity:0.6}),chain(-6.5,!isSim),chain(6.5,!isSim));}
+var MolM=React.memo(Mol);
+
+function Enz(p){var en=ENZS[p.name];if(!en)return null;return h('g',{transform:'translate('+p.x+','+p.y+')',className:p.cls||''},h('ellipse',{cx:0,cy:0,rx:19,ry:7.5,fill:en.col,stroke:'rgba(0,0,0,0.4)',strokeWidth:0.8,opacity:0.9}),h('text',{x:0,y:2.5,textAnchor:'middle',fontSize:5.5,fontWeight:700,fill:'#1a1a1a'},p.name));}
+var EnzM=React.memo(Enz);
+
+function App(){
+  var _m=useState('welcome'),mode=_m[0],setMode=_m[1];
+  var _cs=useState(0),cs=_cs[0],setCs=_cs[1];
+  var _dn=useState(new Set()),done=_dn[0],setDone=_dn[1];
+  var _se=useState(null),selEnz=_se[0],setSelEnz=_se[1];
+  var _sp=useState(null),selProd=_sp[0],setSelProd=_sp[1];
+  var _ps=useState({}),pst=_ps[0],setPst=_ps[1];
+  var _hi=useState(false),hints=_hi[0],setHints=_hi[1];
+  var _to=useState(null),toast=_to[0],setToast=_to[1];
+  var _sk=useState(null),shk=_sk[0],setShk=_sk[1];
+  var _lc=useState(null),lc=_lc[0],setLc=_lc[1];
+  var _sh=useState(false),showHelp=_sh[0],setShowHelp=_sh[1];
+  var _st=useState(false),showSum=_st[0],setShowSum=_st[1];
+  var _dr=useState(false),drawerOpen=_dr[0],setDrawerOpen=_dr[1];
+  var _qa=useState({}),qans=_qa[0],setQans=_qa[1];
+  var _eo=useState(Object.keys(ENZS)),enzOrder=_eo[0],setEnzOrder=_eo[1];
+  var _po=useState(Object.keys(MOLS).filter(function(k){return k!=='glucose';})),prodOrder=_po[0],setProdOrder=_po[1];
+  var _sq=useState(null),stepQuiz=_sq[0],setStepQuiz=_sq[1];
+  var _sqA=useState(null),sqAns=_sqA[0],setSqAns=_sqA[1];
+  var _str=useState(0),streak=_str[0],setStreak=_str[1];
+  var _af=useState(null),atpFloat=_af[0],setAtpFloat=_af[1];
+  var _sc=useState(false),showCompare=_sc[0],setShowCompare=_sc[1];
+  var _cs2=useState(null),compareStep=_cs2[0],setCompareStep=_cs2[1];
+  /* FIX 3: flash counter for Products header */
+  var _pf=useState(0),prodFlash=_pf[0],setProdFlash=_pf[1];
+  var _dw=useState(false),drawerWasOpen=_dw[0],setDrawerWasOpen=_dw[1];
+  /* FIX 5+13: show-answer revealed state & persistent misconception message */
+  var _rv=useState({}),revealed=_rv[0],setRevealed=_rv[1];
+  var _mm=useState(null),misconceptionMsg=_mm[0],setMisconceptionMsg=_mm[1];
+  /* NEW: mobile sidebar tab (null=hidden, 'enz'=enzymes, 'prod'=products) */
+  var _mt=useState(null),mobTab=_mt[0],setMobTab=_mt[1];
+  /* NEW: energy state toggle for interactive PFK-1 demo */
+  var _es=useState('normal'),energyState=_es[0],setEnergyState=_es[1];
+  var _rq=useState([]),repeatQueue=_rq[0],setRepeatQueue=_rq[1];
+  var _ri=useState(false),inRepeat=_ri[0],setInRepeat=_ri[1];var _cr=useState(false),confirmReset=_cr[0],setConfirmReset=_cr[1];
+  /* NEW: quiz category filter */
+  var _qf=useState('All'),quizCat=_qf[0],setQuizCat=_qf[1];
+  /* NEW: quiz wrong-only mode */
+  var _qw=useState(false),quizWrongOnly=_qw[0],setQuizWrongOnly=_qw[1];var _qi=useState(0),quizIdx=_qi[0],setQuizIdx=_qi[1];
+  /* Detail level: basic=Beginner, adv=Advanced */
+  var _lv=useState('basic'),level=_lv[0],setLevel=_lv[1];
+  /* Theme: dark / light */
+  var _th=useState('dark'),theme=_th[0],setTheme=_th[1];
+  var autoR=useRef(null),toastR=useRef(null);
+
+  var energy=useMemo(function(){return Array.from(done).reduce(function(acc,id){var s=STEPS[id-1];if(s){acc.atp+=s.atp;acc.nadh+=s.nadh;}return acc;},{atp:0,nadh:0});},[done]);
+  var sd=cs>0?STEPS[cs-1]:null;
+  /* FIX 7: single consolidated stepOk — no duplication */
+  var curPst=pst[cs]||{enzymeCorrect:false,productCorrect:false,attempts:0};
+  var stepOk=mode==='practice'?!!(curPst.enzymeCorrect&&curPst.productCorrect):done.has(cs);
+
+  useEffect(function(){
+    function onKey(e){
+      if(e.key==='Escape'){if(showHelp){setShowHelp(false);return;}if(showSum){setShowSum(false);return;}if(showCompare){setShowCompare(false);return;}}
+      if(showHelp||showSum)return;
+      if(mode==='learn'){if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();advance();}if(e.key==='ArrowLeft'){e.preventDefault();goBack();}}
+      if(mode==='practice'&&stepOk&&(e.key==='ArrowRight'||e.key===' ')){e.preventDefault();practNext();}
+      if(e.key==='d'||e.key==='D')setDrawerOpen(function(v){return !v;});
+    }
+    window.addEventListener('keydown',onKey);return function(){window.removeEventListener('keydown',onKey);};
+  },[mode,stepOk,showHelp,showSum,showCompare,cs]);
+
+  useEffect(function(){if(mode==='learn'&&(cs===1||cs===3||cs===6||cs===10))setDrawerOpen(true);},[cs,mode]);
+  useEffect(function(){if(cs!==3)setEnergyState('normal');},[cs]);
+
+  /* NEW: localStorage persistence — load saved quiz answers on mount */
+  useEffect(function(){
+    try{
+      var saved=localStorage.getItem('glycolysis_quiz');
+      if(saved){var parsed=JSON.parse(saved);if(parsed&&typeof parsed==='object')setQans(parsed);}
+    }catch(e){}
+  },[]);
+  /* Save quiz answers whenever they change */
+  useEffect(function(){
+    try{if(Object.keys(qans).length>0)localStorage.setItem('glycolysis_quiz',JSON.stringify(qans));}catch(e){}
+  },[qans]);
+
+  function showT(type,msg,dur){clearTimeout(toastR.current);setToast({t:type,m:msg});toastR.current=setTimeout(function(){setToast(null);},dur||2500);}
+
+  var startMode=useCallback(function(m){
+    setMode(m);setCs(0);setDone(new Set());setSelEnz(null);setSelProd(null);setPst({});setToast(null);setDrawerOpen(false);
+    if(m==='quiz'){setQans({});setQuizIdx(0);try{localStorage.removeItem('glycolysis_quiz');}catch(e){}}
+    setStreak(0);setStepQuiz(null);setSqAns(null);setAtpFloat(null);setShowCompare(false);setCompareStep(null);
+    setRevealed({});setMisconceptionMsg(null);setRepeatQueue([]);setInRepeat(false);
+    setQuizCat('All');setQuizWrongOnly(false);
+    if(m==='practice'){setEnzOrder(shuffle(Object.keys(ENZS)));setProdOrder(shuffle(Object.keys(MOLS).filter(function(k){return k!=='glucose';})));}
+  },[]);
+
+  var advance=useCallback(function(){
+    if(cs===0){setCs(1);if(mode==='learn'){setDone(new Set([1]));if(STEPS[0].atp!==0)setLc('atp');}setSelEnz(null);setSelProd(null);setTimeout(function(){setLc(null);},500);return;}
+    if(mode==='learn'&&[1,3,6,10].indexOf(cs)>=0&&STEP_QUIZ[cs]&&!stepQuiz){setDrawerWasOpen(drawerOpen);setDrawerOpen(false);setStepQuiz(true);setSqAns(null);return;}
+    setStepQuiz(null);setSqAns(null);setDrawerOpen(drawerWasOpen);
+    if(cs<10){var nx=cs+1;setCs(nx);if(mode==='learn'){setDone(function(prev){return new Set([].concat(Array.from(prev),[nx]));});var nxS=STEPS[nx-1];if(nxS&&nxS.atp!==0){setLc('atp');setAtpFloat({val:(nxS.atp>0?'+':'')+nxS.atp+' ATP',pos:nxS.atp>0});setTimeout(function(){setAtpFloat(null);},900);}if(nxS&&nxS.nadh>0)setLc('nadh');}}
+    else{setMode('complete');}
+    setSelEnz(null);setSelProd(null);setTimeout(function(){setLc(null);},500);
+  },[cs,mode,stepQuiz,drawerOpen,drawerWasOpen]);
+
+  var goBack=useCallback(function(){if(mode!=='learn'||cs<=1)return;var nc=new Set(done);nc.delete(cs);setDone(nc);setCs(cs-1);},[mode,cs,done]);
+  var jumpTo=useCallback(function(t){if(mode!=='learn')return;var nc=new Set();for(var i=1;i<=t;i++)nc.add(i);setDone(nc);setCs(t);},[mode]);
+
+  var revealAnswer=useCallback(function(){
+    if(!sd)return;
+    setPst(function(prev){var n=Object.assign({},prev);n[cs]=Object.assign({},prev[cs],{enzymeCorrect:true,productCorrect:false,attempts:Math.max((prev[cs]&&prev[cs].attempts)||0,3)});return n;});
+    setRevealed(function(prev){var n=Object.assign({},prev);n[cs]=true;return n;});
+    setMisconceptionMsg(null);
+    setStreak(0);
+    setProdFlash(function(v){return v+1;});
+    showT('ok','Answer revealed \u2014 streak reset \u2014 now pick the product');
+  },[sd,cs]);
+
+  var submitEnz=useCallback(function(){
+    if(!selEnz||!sd)return;
+    var ok=selEnz===sd.enz;var att=(curPst.attempts||0)+1;
+    setPst(function(prev){var n=Object.assign({},prev);n[cs]=Object.assign({},prev[cs],{enzymeCorrect:ok,attempts:att});return n;});
+    if(ok){
+      setMisconceptionMsg(null);
+      showT('ok','\u2713 Correct enzyme! Now pick the product.');
+      setProdFlash(function(v){return v+1;});
+    } else {
+      setShk(selEnz);setTimeout(function(){setShk(null);},300);
+      /* FIX 13: persistent dismissible panel replaces timed toast */
+      setMisconceptionMsg(sd.misconception);
+    }
+    setSelEnz(null);
+  },[selEnz,sd,cs,curPst.attempts]);
+
+  /* FIX 8: done written ONLY here — no duplication */
+  var submitProd=useCallback(function(){
+    if(!selProd||!sd)return;
+    var ok=selProd===sd.prod;
+    if(ok){
+      setPst(function(prev){var n=Object.assign({},prev);n[cs]=Object.assign({},prev[cs],{productCorrect:true});return n;});
+      setDone(function(prev){return new Set([].concat(Array.from(prev),[cs]));});
+      if(sd.atp!==0)setLc('atp');if(sd.nadh>0)setLc('nadh');
+      setTimeout(function(){setLc(null);},600);setStreak(function(s){return s+1;});
+      if(sd.atp!==0){setAtpFloat({val:(sd.atp>0?'+':'')+sd.atp+' ATP',pos:sd.atp>0});setTimeout(function(){setAtpFloat(null);},900);}
+      showT('ok','\u2713 Correct! Click Next \u2192');
+    }else{setShk(selProd);setTimeout(function(){setShk(null);},300);setStreak(0);showT('err','\u2717 Wrong product \u2014 try again');}
+    setSelProd(null);
+  },[selProd,sd,cs]);
+
+  var practNext=useCallback(function(){
+    setMisconceptionMsg(null);
+    /* adaptive: if revealed or 3+ attempts, add to repeat queue (only on first pass) */
+    var wasHard=revealed[cs]||(curPst.attempts>=3);
+    if(wasHard&&!inRepeat){
+      setRepeatQueue(function(q){return q.indexOf(cs)<0?q.concat([cs]):q;});
+    }
+    /* Determine next step:
+       - If in repeat mode OR just finished step 10, check the queue first
+       - Otherwise advance sequentially */
+    var shouldCheckQueue=inRepeat||(cs>=10);
+    if(shouldCheckQueue){
+      if(repeatQueue.length>0){
+        var nextRepeat=repeatQueue[0];
+        var remaining=repeatQueue.length;
+        setInRepeat(true);
+        setCs(nextRepeat);
+        setRepeatQueue(function(q){return q.slice(1);});
+        setPst(function(prev){var n=Object.assign({},prev);delete n[nextRepeat];return n;});
+        showT('ok','\ud83d\udd04 Revisiting step '+nextRepeat+' ('+remaining+' tricky step'+(remaining>1?'s':'')+' to go)');
+      } else {
+        setInRepeat(false);
+        setMode('complete');
+      }
+    } else {
+      setCs(cs+1);
+    }
+  },[cs,revealed,curPst.attempts,repeatQueue,inRepeat]);
+  var practScore=useMemo(function(){var steps=Object.keys(pst).length;var atts=Object.values(pst).reduce(function(s,x){return s+(x.attempts||0);},0);return{steps:steps,atts:atts,pct:atts>0?Math.round((steps/atts)*100):0};},[pst]);
+  var ansQ=useCallback(function(qId,oi){if(qans[qId]!==undefined)return;setQans(function(prev){var n=Object.assign({},prev);n[qId]=oi;return n;});},[qans]);
+  var qScore=useMemo(function(){var answered=Object.keys(qans).length;var correct=QUIZ.filter(function(q){return qans[q.id]===q.ans;}).length;return{answered:answered,correct:correct,total:QUIZ.length,pct:answered>0?Math.round((correct/QUIZ.length)*100):0};},[qans]);
+
+  var sqData=cs>0?STEP_QUIZ[cs]:null;
+  var stepQuizOv=stepQuiz&&sqData&&mode==='learn'&&h('div',{className:'sq-overlay'},h('div',{className:'sq-box'},
+    h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}},h('div',{className:'sq-tag'},'Quick check \u2014 Step '+cs),h('button',{className:'btn',style:{fontSize:11,padding:'3px 10px'},onClick:advance},'Skip \u2192')),
+    h('div',{className:'sq-q'},sqData.q),
+    h('div',{className:'sq-opts'},sqData.opts.map(function(opt,oi){var cls='sq-opt';if(sqAns!==null){cls+=' sq-lock';if(oi===sqData.ans)cls+=' sq-right';else if(oi===sqAns)cls+=' sq-wrong';}return h('button',{key:oi,className:cls,onClick:function(){if(sqAns===null)setSqAns(oi);}},opt);})),
+    sqAns!==null&&h('div',{className:'sq-exp'},h('strong',{style:{color:sqAns===sqData.ans?'var(--green)':'var(--red)'}},sqAns===sqData.ans?'\u2713 Correct! ':'\u2717 Incorrect. '),sqData.exp),
+    sqAns!==null&&h('button',{className:'btn primary',style:{marginTop:12,width:'100%'},onClick:advance},cs<10?'Continue \u2192':'\ud83c\udf89 Finish!')
+  ));
+
+  var dispS=cs>0?STEPS[cs-1]:STEPS[0];
+
+  /* Quiz mode — one question at a time (Fix 11) */
+  if(mode==='quiz'){
+    var CATS=['All','Enzymes','Energy','Coenzymes','Substrates & Products','Steps & Sequence','Reactions'];
+    var filteredQuiz=QUIZ.filter(function(q){
+      if(quizCat!=='All'&&q.cat!==quizCat) return false;
+      if(quizWrongOnly&&qans[q.id]===q.ans) return false;
+      return true;
+    });
+    /* quizIdx state declared at top level */
+    /* clamp index when filter changes */
+    var safeIdx=Math.min(quizIdx,Math.max(filteredQuiz.length-1,0));
+    var curQ=filteredQuiz[safeIdx];
+    var answeredInFilter=filteredQuiz.filter(function(q){return qans[q.id]!==undefined;}).length;
+    var correctInFilter=filteredQuiz.filter(function(q){return qans[q.id]===q.ans;}).length;
+
+    var qCard=curQ&&(function(){
+      var chosen=qans[curQ.id],answered=chosen!==undefined;
+      var opts=curQ.opts.map(function(opt,oi){
+        var cls='q-opt';
+        if(answered){cls+=' locked';if(oi===curQ.ans)cls+=' correct';else if(oi===chosen)cls+=' wrong';}
+        return h('button',{key:oi,className:cls,onClick:function(){ansQ(curQ.id,oi);}},h('span',{className:'q-opt-letter'},String.fromCharCode(65+oi)),opt);
+      });
+      return h('div',{className:'q-card'},
+        h('div',{className:'q-cat'},curQ.cat),
+        h('div',{className:'q-num'},'Q'+(safeIdx+1)+' of '+filteredQuiz.length),
+        h('div',{className:'q-text'},curQ.q),
+        h('div',{className:'q-opts'},opts),
+        answered&&h('div',{className:'q-exp'},h('strong',null,chosen===curQ.ans?'\u2713 Correct! ':'\u2717 Incorrect. '),curQ.exp),
+        h('div',{style:{display:'flex',gap:8,marginTop:14,justifyContent:'space-between',alignItems:'center'}},
+          h('button',{className:'btn',disabled:safeIdx===0,onClick:function(){setQuizIdx(safeIdx-1);}},'\u2190 Prev'),
+          h('span',{style:{fontSize:11,color:'var(--muted)',fontFamily:'var(--mono)'}},
+            answeredInFilter+'/'+filteredQuiz.length+' answered'+(answeredInFilter>0?' \u00b7 '+correctInFilter+' correct':'')),
+          answered&&safeIdx<filteredQuiz.length-1
+            ?h('button',{className:'btn primary',onClick:function(){setQuizIdx(safeIdx+1);}},'\u2192 Next')
+            :answered&&safeIdx===filteredQuiz.length-1
+              ?h('button',{className:'btn primary',onClick:function(){setQuizIdx(0);}},'\ud83d\udcca Review from start')
+              :h('button',{className:'btn',disabled:true,style:{opacity:.35}},'Answer to continue')
+        )
+      );
+    })();
+
+    /* Progress dots */
+    var qDots=h('div',{style:{display:'flex',gap:3,flexWrap:'wrap',padding:'8px 20px',background:'var(--panel2)',borderBottom:'1px solid var(--border)',flexShrink:0}},
+      filteredQuiz.map(function(q,i){
+        var ans=qans[q.id];
+        var isCorrect=ans===q.ans;
+        var isWrong=ans!==undefined&&ans!==q.ans;
+        var isCur=i===safeIdx;
+        return h('div',{key:q.id,
+          title:'Q'+(i+1)+': '+q.q.substring(0,50)+'...',
+          onClick:function(){setQuizIdx(i);},
+          style:{width:20,height:20,borderRadius:'50%',cursor:'pointer',flexShrink:0,
+            background:isCorrect?'var(--green)':isWrong?'var(--red)':isCur?'var(--amber)':'var(--border)',
+            border:isCur?'2px solid var(--text)':'2px solid transparent',
+            transition:'all .2s'}
+        });
+      })
+    );
+
+    var endBlock=answeredInFilter===filteredQuiz.length&&filteredQuiz.length>0&&h('div',{style:{textAlign:'center',padding:'20px 0'}},
+      h('div',{className:'quiz-score-box'},
+        h('div',{className:'qs-val'},correctInFilter+'/'+filteredQuiz.length),
+        h('div',{className:'qs-lbl'},correctInFilter/filteredQuiz.length>=.9?'\ud83c\udfc6 Excellent!':correctInFilter/filteredQuiz.length>=.7?'\ud83d\udc4d Good \u2014 review mistakes':'\ud83d\udcda Keep studying')
+      ),
+      h('div',{style:{display:'flex',gap:8,justifyContent:'center',flexWrap:'wrap',paddingTop:16}},
+        h('button',{className:'btn',onClick:function(){setQuizWrongOnly(true);setQuizIdx(0);}},'\u26a0 Review wrong only'),
+        h('button',{className:'btn danger',title:'Clear all your answers and start the quiz from scratch',onClick:function(){try{localStorage.removeItem('glycolysis_quiz');}catch(e){}setQans({});setQuizWrongOnly(false);setQuizIdx(0);}},'\u267b Reset answers'),
+        h('button',{className:'btn',style:{borderColor:'rgba(148,163,184,.4)'},onClick:function(){startMode('welcome');}},'\u2190 Menu'),
+        h('button',{className:'btn',onClick:function(){startMode('learn');}},'\ud83d\udcd6 Review'),
+        h('button',{className:'btn',onClick:function(){startMode('practice');}},'\ud83c\udfaf Practice')
+      )
+    );
+
+    return h('div',{className:'quiz-wrap'+(theme==='light'?' light-mode':'')},
+      h('div',{className:'quiz-head'},
+        h('div',null,
+          h('h2',null,'\ud83c\udf93 Glycolysis Quiz'),
+          h('div',{className:'qh-sub'},answeredInFilter+'/'+filteredQuiz.length+' answered \u00b7 '+correctInFilter+' correct'+(answeredInFilter>0?' \u00b7 '+Math.round(correctInFilter/Math.max(answeredInFilter,1)*100)+'% accuracy':''))
+        ),
+        h('div',{style:{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}},
+          answeredInFilter===filteredQuiz.length&&filteredQuiz.length>0&&h('div',{className:'score-badge'},Math.round(correctInFilter/filteredQuiz.length*100)+'%'),
+          h('button',{className:'btn',style:{borderColor:'rgba(148,163,184,.4)'},onClick:function(){startMode('welcome');}},'\u2190 Menu')
+        )
+      ),
+      h('div',{style:{background:'var(--panel2)',borderBottom:'1px solid var(--border)',padding:'6px 16px',display:'flex',gap:4,flexWrap:'wrap',alignItems:'center',flexShrink:0}},
+        h('span',{style:{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'1px',textTransform:'uppercase',marginRight:4,flexShrink:0}},'Filter:'),
+        CATS.map(function(cat){
+          return h('button',{key:cat,className:'btn',style:{padding:'3px 9px',fontSize:11,background:quizCat===cat?'rgba(34,211,238,.15)':'',borderColor:quizCat===cat?'var(--accent)':'',color:quizCat===cat?'var(--accent)':''},onClick:function(){setQuizCat(cat);setQuizWrongOnly(false);setQuizIdx(0);}},cat);
+        }),
+              ),
+      qDots,
+      filteredQuiz.length===0&&h('div',{style:{textAlign:'center',padding:40,color:'var(--muted)'}},
+        quizWrongOnly
+          ? h('div',null,h('div',{style:{fontSize:28,marginBottom:8}},'\ud83c\udfc6'),h('div',{style:{fontSize:14,fontWeight:700,color:'var(--green)',marginBottom:6}},'All correct in this category!'),h('div',{style:{fontSize:12}},'No wrong answers here. Try a different category or click \u267b Reset answers to start fresh.'))
+          : '\u2714 No questions in this filter.'
+      ),
+      h('div',{className:'quiz-body'},qCard,endBlock)
+    );
+  }
+
+    /* Welcome */
+  if(mode==='welcome'){return h('div',{className:'welcome-bg'+(theme==='light'?' light-mode':'')},h('button',{className:'theme-btn',style:{position:'absolute',top:16,right:16},title:theme==='dark'?'Switch to light mode':'Switch to dark mode',onClick:function(){setTheme(theme==='dark'?'light':'dark');}},theme==='dark'?'Light mode':'Dark mode'),h('div',{className:'welcome-content'},h('h1',{className:'welcome-title'},'Glyco',h('span',null,'lysis')),h('p',{className:'welcome-sub'},'10 steps \u00b7 10 enzymes \u00b7 the universal pathway of glucose breakdown'),h('p',{style:{fontSize:14,color:'var(--muted)',marginBottom:28,lineHeight:1.65,maxWidth:520,margin:'16px auto 28px'}},'Also called the EMP pathway (Embden\u2013Meyerhof\u2013Parnas). Occurs in the cytoplasm. Breaks down one glucose molecule (6C) into two pyruvic acid molecules (3C), releasing energy as ATP and NADH.'),h('div',{className:'mode-grid'},h('div',{className:'mode-card mc-learn',onClick:function(){startMode('learn');}},h('div',{className:'mc-icon'},'\ud83d\udcd6'),h('div',{className:'mc-title'},'Learn'),h('div',{className:'mc-desc'},'Guided walkthrough with full biochemical detail. Jump to any step, auto-play, keyboard shortcuts.')),h('div',{className:'mode-card mc-practice',onClick:function(){startMode('practice');}},h('div',{className:'mc-icon'},'\ud83c\udfaf'),h('div',{className:'mc-title'},'Practice'),h('div',{className:'mc-desc'},'Match each enzyme and product from memory. Hints show misconception feedback.')),h('div',{className:'mode-card mc-quiz',onClick:function(){startMode('quiz');}},h('div',{className:'mc-icon'},'\ud83c\udf93'),h('div',{className:'mc-title'},'Quiz'),h('div',{className:'mc-desc'},'12 exam-level MCQs with detailed explanations and instant scoring.')))));}
+
+  /* Complete */
+  if(mode==='complete'){
+    return h('div',{className:'welcome-bg'+(theme==='light'?' light-mode':'')},
+      h('button',{className:'theme-btn',style:{position:'absolute',top:16,right:16},title:theme==='dark'?'Switch to light mode':'Switch to dark mode',onClick:function(){setTheme(theme==='dark'?'light':'dark');}},theme==='dark'?'Light mode':'Dark mode'),
+      h('div',{className:'complete-box'},
+        h('div',{style:{fontSize:38,marginBottom:8}},'\ud83c\udf89'),
+        h('div',{className:'complete-title'},'Glycolysis Complete!'),
+        h('div',{className:'complete-sub'},'One glucose \u2192 two molecules of pyruvic acid'),
+        h('div',{className:'complete-stats'},
+          h('div',{className:'cs'},h('div',{className:'cs-val'},'1'),h('div',{className:'cs-lbl'},'Glucose')),
+          h('div',{className:'cs'},h('div',{className:'cs-val',style:{color:'var(--accent2)'}},'2'),h('div',{className:'cs-lbl'},'Pyruvic acid')),
+          h('div',{className:'cs'},h('div',{className:'cs-val',style:{color:'var(--green)'}},'+2'),h('div',{className:'cs-lbl'},'Net ATP')),
+          h('div',{className:'cs'},h('div',{className:'cs-val',style:{color:'var(--accent)'}},'2'),h('div',{className:'cs-lbl'},'NADH'))
+        ),
+        Object.keys(pst).length>0&&practScore.atts>0&&h('div',{style:{background:'rgba(34,211,238,.08)',border:'1px solid rgba(34,211,238,.2)',borderRadius:8,padding:12,marginBottom:12,textAlign:'left',fontSize:12}},h('div',{style:{fontWeight:700,color:'var(--accent)',marginBottom:4}},'Practice Score'),h('div',{style:{color:'var(--muted)'}},'Accuracy: ',h('strong',{style:{color:'var(--text)'}},practScore.pct+'%'),' ('+practScore.steps+' steps, '+practScore.atts+' total attempts)')),
+        h('div',{className:'complete-next'},
+          h('strong',{style:{color:'var(--text)'}},'What happens to pyruvic acid?'),h('br'),
+          '\u2665 Aerobic: Pyruvic acid \u2192 Pyruvate Dehydrogenase Complex \u2192 Acetyl-CoA \u2192 Krebs Cycle \u2192 ETC',h('br'),
+          '\u26a1 Anaerobic: Pyruvic acid \u2192 Lactic acid (regenerates NAD\u207a, sustains glycolysis)',h('br'),h('br'),
+          h('span',{style:{fontSize:11,color:'var(--muted)'}},'Net glycolysis yield: 2 ATP + 2 NADH per glucose.')
+        ),
+        h('div',{className:'complete-btns'},
+          h('button',{className:'btn',style:{borderColor:'rgba(148,163,184,.4)'},onClick:function(){startMode('welcome');}},'\u2190 Menu'),
+          h('button',{className:'btn',onClick:function(){setShowSum(true);}},'\ud83d\udcca Summary'),
+          h('button',{className:'btn',onClick:function(){startMode('quiz');}},'\ud83c\udf93 Quiz'),
+          h('button',{className:'btn primary',onClick:function(){startMode('learn');}},'\u21ba Again')
+        )
+      ),
+      showSum&&summaryOverlay()
+    );
+  }
+
+  function summaryOverlay(){return h('div',{className:'overlay',onClick:function(ev){if(ev.target===ev.currentTarget)setShowSum(false);}},h('div',{className:'overlay-box'},h('div',{className:'overlay-head'},h('h2',null,'\ud83d\udcca Glycolysis \u2014 All 10 Steps'),h('div',{style:{display:'flex',gap:6,alignItems:'center'}},h('button',{className:'btn',style:{padding:'4px 10px',fontSize:11},onClick:function(){window.print();}},'\ud83d\udda8 Print'),h('button',{className:'overlay-close',onClick:function(){setShowSum(false);}},'\u2715'))),h('div',{className:'overlay-body'},h('table',{className:'sum-table'},h('thead',null,h('tr',null,h('th',null,'Step'),h('th',null,'Enzyme'),h('th',null,'Reaction'),h('th',null,'Energy'),h('th',null,'Rev?'),h('th',null,'Phase'))),h('tbody',null,STEPS.map(function(s){var rowCls=s.phase==='prep'?'prep-row':'payoff-row';var enTag=!s.rev?h('span',{className:'tag irr'},'\ud83d\udd12 Irrev'):h('span',{style:{color:'var(--muted)',fontSize:11}},'Rev');var enPhase=s.phase==='prep'?h('span',{style:{fontSize:11,color:'#fca5a5'}},'Preparatory'):h('span',{style:{fontSize:11,color:'#86efac'}},'Pay-off');var enReg=s.regulatory?h('span',{style:{fontSize:11,color:'var(--accent2)',marginLeft:4}},'Rate-limiting'):'';var enAtp=s.atp!==0?h('span',{className:s.atp>0?'atp-p':'atp-n',style:{fontWeight:700}},(s.atp>0?'+':'')+s.atp+' ATP'):'';var enNadh=s.nadh>0?h('span',{className:'nh',style:{fontWeight:700,marginLeft:s.atp!==0?6:0}},'+'+s.nadh+' NADH'):'';return h('tr',{key:s.id,className:rowCls},h('td',null,h('strong',null,s.id)),h('td',null,s.enz,enReg),h('td',null,h('span',{style:{fontSize:11,fontFamily:'var(--mono)',color:'var(--accent)'}},s.rxn)),h('td',null,enAtp,enNadh||(s.atp===0&&s.nadh===0?h('span',{style:{color:'var(--muted)',fontSize:11}},'\u2014'):'')),h('td',null,enTag),h('td',null,enPhase));}))),h('div',{style:{marginTop:14,padding:'10px 12px',background:'rgba(34,211,238,.05)',border:'1px solid rgba(34,211,238,.15)',borderRadius:8,fontSize:12,color:'var(--muted)',lineHeight:1.7}},h('strong',{style:{color:'var(--text)'}},'Net result per glucose: '),'+2 ATP (net) \u00b7 +2 NADH \u00b7 2 Pyruvic acid \u00b7 Location: cytoplasm',h('br'),'Preparatory (steps 1\u20135): \u22122 ATP. Pay-off (steps 6\u201310): +4 ATP, +2 NADH.',h('br'),'Irreversible steps: 1, 3, 4, 10 (Hexokinase, PFK-1, Aldolase, Pyruvate Kinase).'))));}
+
+
+  /* Help overlay — FIX 4: Compare tip added to learn steps */
+  var learnSteps=['Click "Start \u2192" to load Step 1 on the diagram.','Read the step title, enzyme name, and reaction in the banner.','Click "\u25bc Show detail" or press D to expand the detail drawer.','Click "Next Step \u2192" or press Space/\u2192 to advance.','Press \u2190 or click "Back" to revisit the previous step.','Click any progress dot to jump directly to that step.','A quick question appears on key steps \u2014 answer it or press Skip.','Once all 10 steps are done, a "Compare Steps" button unlocks \u2014 compare any two steps side by side.'];
+  var practiceSteps=['Click "Start \u2192" to begin with Step 1.','Click the enzyme you think catalyses the current step from the Enzymes list.','Click the dashed ENZYME SLOT on the diagram to confirm \u2014 green = correct.','After enzyme confirmed, the \ud83e\uddec Products panel on the RIGHT flashes green \u2014 pick the correct product.','Click the dashed PRODUCT SLOT to confirm the product.','When both are confirmed, click "Next \u2192" to advance.','Enable \ud83d\udca1 Hints in the toolbar if stuck \u2014 hints show the correct choice.'];
+  var isPractMode=mode==='practice';
+  var helpSteps=isPractMode?practiceSteps:learnSteps;
+  var helpOv=showHelp&&h('div',{className:'overlay',onClick:function(ev){if(ev.target===ev.currentTarget)setShowHelp(false);}},h('div',{className:'overlay-box'},
+    h('div',{className:'overlay-head'},h('h2',null,isPractMode?'\ud83c\udfaf Practice \u2014 how to play':'\ud83d\udcd6 Learn \u2014 how to navigate'),h('button',{className:'overlay-close',onClick:function(){setShowHelp(false);}},'\u2715')),
+    h('div',{className:'overlay-body'},
+      h('div',{className:'instr-sec'},h('div',{className:'instr-title'},isPractMode?'Step-by-step instructions':'Navigation guide'),helpSteps.map(function(t,i){return h('div',{className:'instr-step',key:i},h('div',{className:'isn'},i+1),h('div',{className:'ist'},t));})),
+      isPractMode&&h('div',{className:'instr-sec'},h('div',{className:'instr-title'},'Instruction strip'),h('div',{style:{background:'rgba(251,191,36,.07)',border:'1px solid rgba(251,191,36,.2)',borderRadius:8,padding:'10px 14px',fontSize:11,color:'var(--text)',lineHeight:1.6}},'The amber strip above the diagram shows your current task. The three circles track: ',h('strong',null,'1 Pick enzyme'),'\u00a0\u203a\u00a0',h('strong',null,'2 Pick product'),'\u00a0\u203a\u00a0',h('strong',null,'3 Next \u2192'),'. Cyan = active; green = done; grey = not yet.')),
+      !isPractMode&&h('div',{className:'instr-sec'},h('div',{className:'instr-title'},'Controls at a glance'),h('div',{className:'instr-grid'},h('div',{className:'instr-card'},h('div',{className:'ic-title'},'Detail drawer'),h('div',{className:'ic-desc'},'Press D or click toggle to expand the full enzyme, reaction and notes.')),h('div',{className:'instr-card'},h('div',{className:'ic-title'},'Quick check'),h('div',{className:'ic-desc'},'A quick check question pops on steps 1, 3, 6 and 10. Answer or press Skip.')),h('div',{className:'instr-card'},h('div',{className:'ic-title'},'Jump to step'),h('div',{className:'ic-desc'},'Click any dot on the progress bar to jump directly.')),h('div',{className:'instr-card'},h('div',{className:'ic-title'},'Compare steps'),h('div',{className:'ic-desc'},'Unlocks after step 10 \u2014 compare any two steps side by side.')),h('div',{className:'instr-card'},h('div',{className:'ic-title'},'Keyboard'),h('div',{className:'ic-desc'},h('span',{style:{color:'var(--green)',fontWeight:700}},'→ = Next'),h('span',{style:{color:'var(--muted)'}},' · '),h('span',{style:{color:'var(--accent)',fontWeight:700}},'← = Back'),h('span',{style:{color:'var(--muted)'}},' · '),h('span',{style:{color:'var(--amber)',fontWeight:700}},'D = detail'))))),
+      h('div',{className:'instr-sec'},h('div',{className:'instr-title'},'Diagram legend'),h('div',{className:'legend-grid'},h('div',{className:'legend-row'},h('div',{style:{width:10,height:10,borderRadius:'50%',background:'var(--green)',flexShrink:0}}),h('span',null,'Completed step')),h('div',{className:'legend-row'},h('div',{style:{width:10,height:10,borderRadius:'50%',background:'var(--amber)',flexShrink:0}}),h('span',null,'Current step (blinking)')),h('div',{className:'legend-row'},h('div',{style:{width:10,height:6,borderRadius:0,background:'var(--red)',flexShrink:0,marginTop:2}}),h('span',null,'Red pip = irreversible step (1, 3, 4, 10)')),h('div',{className:'legend-row'},h('div',{style:{width:10,height:10,borderRadius:'50%',background:'#fbbf24',flexShrink:0}}),h('span',null,'Yellow circle = phosphate group')),h('div',{className:'legend-row'},h('div',{style:{width:22,height:9,borderRadius:11,background:'#f9a8d4',flexShrink:0}}),h('span',null,'Oval = enzyme')))),
+      h('div',{className:'instr-sec'},h('div',{className:'instr-title'},'Key facts'),h('div',{className:'key-facts'},h('div',{className:'kf'},h('strong',null,'Net ATP'),'+2 per glucose (invest 2, gain 4)'),h('div',{className:'kf'},h('strong',null,'Net NADH'),'2 cytoplasmic NADH (step 6 only)'),h('div',{className:'kf'},h('strong',null,'Phases'),'Preparatory: steps 1\u20135 | Pay-off: steps 6\u201310'),h('div',{className:'kf'},h('strong',null,'Irreversible'),'Steps 1, 3, 4, 10'),h('div',{className:'kf'},h('strong',null,'Rate-limiter'),'PFK-1 (step 3)'),h('div',{className:'kf'},h('strong',null,'Location'),'Cytoplasm (no O\u2082 required)')))
+    )
+  ));
+
+  /* Banner */
+  var tags=[];
+  if(cs>0){
+    if(!isPractMode){if(dispS.atp<0)tags.push(h('span',{key:'an',className:'step-tag st-neg'},dispS.atp+' ATP'));if(dispS.atp>0)tags.push(h('span',{key:'ap',className:'step-tag st-pos'},'+'+dispS.atp+' ATP'));if(dispS.nadh>0)tags.push(h('span',{key:'nh',className:'step-tag st-nadh'},'+'+dispS.nadh+' NADH'));if(!dispS.rev)tags.push(h('span',{key:'ir',className:'step-tag st-irrev'},'\ud83d\udd12 Irreversible'));if(dispS.regulatory)tags.push(h('span',{key:'rg',className:'step-tag st-reg'},'\u2699 Rate-limiting'));}
+    if(dispS.phase==='prep')tags.push(h('span',{key:'ph',className:'step-tag st-prep'},'Preparatory Phase'));else tags.push(h('span',{key:'ph',className:'step-tag st-payoff'},'Pay-off Phase'));
+  }
+  var banner=h('div',{className:'step-banner'},
+    h('div',{className:'step-num-circle'},cs===0?'\u25b6':String(cs)),
+    h('div',{className:'step-main'},h('div',{className:'step-title-row'},h('div',{className:'step-title'},cs===0?'Click Start to begin':isPractMode?'Step '+cs+' of 10 \u2014 identify the enzyme and product':dispS.title),cs>0&&!isPractMode&&h('div',{className:'step-enz'},dispS.enzFull)),cs>0&&!isPractMode&&h('div',{className:'step-rxn'},dispS.rxn),cs>0&&h('div',{className:'step-tags'},tags)),
+    h('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6,flexShrink:0}},
+      h('div',{className:'energy-bar'},
+        h('div',{className:'e-pill'+(lc==='atp'?' pop':''),title:energy.atp<0?'Investing ATP in the preparatory phase \u2014 recovered at steps 7 & 10':'Net ATP produced so far'},
+          h('span',{className:'e-label'},'Net ATP'),
+          h('span',{className:'e-val '+(energy.atp>=0?'ev-green':'ev-red')},(energy.atp>=0?'+':'')+energy.atp),
+          energy.atp<0&&h('span',{style:{fontSize:11,color:'var(--muted)',marginTop:1}},'\u25b3 investing')
+        ),
+        h('div',{className:'e-pill'+(lc==='nadh'?' pop':''),title:'Each cytoplasmic NADH yields ~2.5 ATP via the electron transport chain (malate\u2013aspartate shuttle)'},
+          h('span',{className:'e-label'},'NADH'),
+          h('span',{className:'e-val ev-cyan'},'+'+energy.nadh),
+          energy.nadh>0&&h('span',{style:{fontSize:9,color:'var(--muted)',marginTop:1}},'\u2248'+(energy.nadh*2.5)+' ATP via ETC')
+        )
+      ),
+      cs>0&&!isPractMode&&h('div',{className:'level-toggle',title:'Switch explanation level'},
+        h('button',{className:'level-btn'+(level==='basic'?' active-basic':''),onClick:function(){setLevel('basic');}},'\ud83d\udcd6 Beginner'),
+        h('button',{className:'level-btn'+(level==='adv'?' active-adv':''),onClick:function(){setLevel('adv');}},'\u26a1 Advanced')
+      ),
+      cs>0&&isPractMode&&h('div',{style:{fontSize:11,fontWeight:700,textAlign:'right',lineHeight:1.5}},
+        h('div',{style:{color:dispS&&dispS.phase==='prep'?'#fca5a5':'#86efac',letterSpacing:'.5px',textTransform:'uppercase',fontSize:11}},
+          dispS&&dispS.phase==='prep'?'Preparatory Phase':'Pay-off Phase'
+        ),
+        h('div',{style:{color:'var(--muted)',fontSize:11}},done.size+'/10 steps done')
+      )
+    )
+  );
+
+  /* Energy state toggle — declared before drawer so it can be used inside it */
+  var energyToggle=cs===3&&mode==='learn'&&h('div',{style:{background:'rgba(167,139,250,.07)',border:'1px solid rgba(167,139,250,.2)',borderRadius:8,padding:'7px 12px',display:'flex',alignItems:'center',gap:8,flexShrink:0,flexWrap:'wrap'}},
+    h('span',{style:{fontSize:11,fontWeight:700,color:'#a78bfa',letterSpacing:'1px',textTransform:'uppercase',flexShrink:0}},'\u26a1 PFK-1 State:'),
+    ['normal','high-atp','low-atp','cancer'].map(function(st){
+      var labels={'normal':'Normal','high-atp':'High ATP (inhibited)','low-atp':'Low ATP (active)','cancer':'Cancer (overactive)'};
+      return h('button',{key:st,className:'btn',style:{padding:'3px 8px',fontSize:11,background:energyState===st?'rgba(167,139,250,.25)':'',borderColor:energyState===st?'#a78bfa':'',color:energyState===st?'#a78bfa':''},onClick:function(){setEnergyState(st);}},labels[st]);
+    })
+  );
+  var energyEffect=cs===3&&mode==='learn'&&energyState!=='normal'&&h('div',{style:{background:'rgba(251,191,36,.07)',border:'1px solid rgba(251,191,36,.2)',borderRadius:7,padding:'6px 12px',fontSize:11,color:'var(--amber)',flexShrink:0}},{
+    'high-atp':'\u26a0 High ATP / citrate: PFK-1 allosterically inhibited \u2014 glycolysis slows. Citrate signals sufficient Krebs cycle activity; no need to generate more pyruvic acid.',
+    'low-atp':'\u2705 Low ATP / high AMP: PFK-1 strongly activated. AMP rises sharply when ATP falls (due to adenylate kinase: 2 ADP \u21cc ATP + AMP), amplifying the signal.',
+    'cancer':'\ud83e\uddec Cancer (Warburg): F2,6BP elevated by RAS/PI3K signalling. PFK-1 constitutively active \u2014 glycolysis runs at full speed even with adequate ATP. PFK-2/PFKFB3 is a therapeutic target.'
+  }[energyState]);
+    var drawerToggle=cs>0&&!isPractMode&&h('button',{className:'drawer-toggle',onClick:function(){setDrawerOpen(function(v){return !v;});}},drawerOpen?'\u25b2 Hide detail':'\u25bc Show detail \u2014 or press D');
+
+  var activeDetail=(level==='basic'&&dispS.detail_basic)?dispS.detail_basic:dispS.detail;
+
+  var drawer=cs>0&&!isPractMode&&h('div',{className:'detail-drawer '+(drawerOpen?'open':'closed')},
+    h('div',{className:'detail-inner'},
+      h('div',null,
+        h('div',{className:'d-label'},'Substrate \u2192 Product'),
+        h('div',{className:'d-val'},dispS.subFull,' (',dispS.subC,') \u2192 ',dispS.prodFull,' (',dispS.prodC,')'),
+        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:10,marginBottom:4}},
+          h('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',letterSpacing:'1px',textTransform:'uppercase',margin:0}},'Detail')
+        ),
+        h('div',{className:'d-val',style:{fontSize:11,color:'var(--muted)',lineHeight:1.5}},activeDetail)
+      ),
+      h('div',null,
+        cs===3&&mode==='learn'&&energyToggle,
+        cs===3&&mode==='learn'&&energyEffect,
+        dispS.note&&h('div',{className:'d-note'},
+          '\ud83d\udca1 ',dispS.note,
+          level==='basic'&&h('span',{className:'adv-badge',style:{cursor:'pointer'},onClick:function(){setLevel('adv');}},'\u26a1 More in Advanced')
+        )
+      )
+    )
+  );
+
+
+  var practStrip=mode==='practice'&&h('div',{className:'pract-strip'},
+    h('div',{className:'pract-strip-steps'},
+      h('div',{className:'ps-step'},h('div',{className:'ps-num '+(curPst.enzymeCorrect?'done':cs>0?'active':'idle')},'1'),h('div',{className:'ps-text '+((!curPst.enzymeCorrect&&cs>0)?'active':'')},'Pick enzyme')),
+      h('span',{className:'ps-arrow'},'\u203a'),
+      h('div',{className:'ps-step'},h('div',{className:'ps-num '+(curPst.productCorrect?'done':curPst.enzymeCorrect?'active':'idle')},'2'),h('div',{className:'ps-text '+(curPst.enzymeCorrect&&!curPst.productCorrect?'active':'')},'Pick product')),
+      h('span',{className:'ps-arrow'},'\u203a'),
+      h('div',{className:'ps-step'},h('div',{className:'ps-num '+(stepOk?'active':'idle')},'3'),h('div',{className:'ps-text '+(stepOk?'active':'')},'Next \u2192'))
+    ),
+    h('div',{className:'pract-instr'},cs===0?'Press Start \u2192 to begin':!curPst.enzymeCorrect?'\u2190 Pick enzyme from list, then tap the dashed slot on diagram':!curPst.productCorrect?'\u2713 Enzyme correct! Now pick product from right panel \u2192':'Both correct \u2014 click Next \u2192'),
+    /* FIX 5: show-answer after 3 wrong attempts */
+    cs>0&&!curPst.enzymeCorrect&&(curPst.attempts||0)>=3&&!revealed[cs]&&h('button',{
+      className:'btn',style:{fontSize:11,padding:'3px 10px',borderColor:'rgba(248,113,113,.4)',color:'var(--red)',marginLeft:'auto'},
+      onClick:revealAnswer
+    },'\ud83d\udca1 Show Answer'),
+    cs>0&&!curPst.enzymeCorrect&&(curPst.attempts||0)<3&&!hints&&(curPst.attempts||0)>0&&h('div',{style:{fontSize:11,color:'var(--muted)',marginLeft:'auto'}},'Stuck? Enable \ud83d\udca1 Hints or try '+(3-(curPst.attempts||0))+' more \u2192 Show Answer'),
+    revealed[cs]&&h('div',{style:{fontSize:11,color:'var(--red)',marginLeft:'auto',fontStyle:'italic'}},'Answer revealed \u2014 streak reset'),
+    curPst.attempts>1&&!revealed[cs]&&h('div',{className:'pract-attempts'},'\u26a0 '+curPst.attempts+' attempts'),
+    inRepeat&&h('div',{style:{fontSize:11,color:'var(--red)',marginLeft:4,fontWeight:700}},'\ud83d\udd04 Repeat')
+  );
+
+  /* FIX 13: Persistent dismissible misconception panel */
+  var misconceptionPanel=mode==='practice'&&misconceptionMsg&&h('div',{className:'misconception-panel'},
+    h('div',{style:{flex:1}},h('strong',null,'\ud83d\udca1 Hint: '),misconceptionMsg),
+    h('button',{className:'mp-dismiss',onClick:function(){setMisconceptionMsg(null);}},'\u00d7 Dismiss')
+  );
+
+  /* Sidebar enzymes */
+  var enzKeys=mode==='practice'?enzOrder:Object.keys(ENZS);
+  var enzList=enzKeys.map(function(name){var data=ENZS[name];var isUsed=Array.from(done).some(function(s){return STEPS[s-1]&&STEPS[s-1].enz===name;});var isSel=selEnz===name;var isHint=hints&&mode==='practice'&&cs>0&&sd&&name===sd.enz&&!curPst.enzymeCorrect;return h('div',{key:name,className:cx('tool-item',isUsed&&'used',isSel&&'selected',isHint&&'highlight',shk===name&&'shake'),onClick:function(){if(mode==='practice'&&!isUsed&&!curPst.enzymeCorrect&&cs>0)setSelEnz(name);}},h('div',{className:'ti-row'},h('div',{className:'ti-dot',style:{background:data.col}}),h('span',{className:'ti-name'},name)),h('div',{className:'ti-full'},data.fn));});
+
+  function makeProdList(){var keys=mode==='practice'?prodOrder:Object.keys(MOLS).filter(function(k){return k!=='glucose';});return keys.map(function(key){var mol=MOLS[key];var isUsed=Array.from(done).some(function(s){return STEPS[s-1]&&STEPS[s-1].prod===key;});var isSel=selProd===key;var isHint=hints&&mode==='practice'&&cs>0&&sd&&key===sd.prod&&curPst.enzymeCorrect&&!curPst.productCorrect;var isDis=mode==='practice'&&(!curPst.enzymeCorrect||cs===0);return h('div',{key:key,className:cx('tool-item',isUsed&&'used',isSel&&'selected',isHint&&'highlight',shk===key&&'shake',isDis&&'disabled'),onClick:function(){if(!isDis&&!isUsed&&mode==='practice')setSelProd(key);}},h('div',{className:'ti-row'},h('div',{className:'ti-dot',style:{background:mol.col,borderRadius:2}}),h('span',{className:'ti-name'},mol.ab),h('span',{style:{fontSize:11,marginLeft:'auto',color:'var(--muted)',fontFamily:'var(--mono)'}},mol.c)),h('div',{className:'ti-full'},mol.fn));});}
+
+  /* Structural formula abbreviations shown alongside molecule labels */
+  var STRUCT_HINTS={
+    glucose:'C\u2086H\u2081\u2082O\u2086',g6p:'Glc-6-P',f6p:'Fru-6-P',f16bp:'Fru-1,6-BP',
+    dhap_g3p:'DHAP+GAP',g3p_x2:'2\u00d7GAP',bpg13:'1,3-BPG',pg3:'3-PG',
+    pg2:'2-PG',pep:'PEP (C\u2083)',pyruvate:'CH\u2083COCOO\u207b'
+  };
+
+  /* Animated phosphate transfer — shows a yellow dot moving from ATP label toward substrate when a step is first revealed */
+  var stepAnim=cs>0&&mode==='learn'&&done.has(cs)&&(function(){
+    var lay=L[cs]; var sdd=STEPS[cs-1];
+    /* Only animate steps that cost/produce ATP */
+    if(sdd.atp===0&&sdd.nadh===0) return null;
+    /* Phosphate dot: starts near enzyme, moves to product position */
+    var x1=lay.ex,y1=lay.ey,x2=lay.px,y2=lay.py;
+    return h('circle',{key:'anim-'+cs,cx:x1,cy:y1,r:3,fill:'#fbbf24',opacity:0.9,
+      style:{animation:'stepPulse 1.2s ease-out 0.1s both'},
+      className:'step-anim-dot'});
+  })();
+
+  var svgDefs=h('defs',null,
+    h('marker',{id:'ar',markerWidth:6,markerHeight:5,refX:5,refY:2.5,orient:'auto'},h('polygon',{points:'0 0,6 2.5,0 5',fill:'#fbbf24'})),
+    h('style',null,
+      '@keyframes stepPulse{0%{r:3;opacity:.9;transform:translate(0,0)}60%{r:5;opacity:.7}100%{r:2;opacity:0;transform:translate(var(--tx,10px),var(--ty,-8px))}}'
+    )
+  );
+  /* flowGuides removed — overlapped molecule labels and added no value */
+  var flowGuides=false;
+  var phLabels=done.has(10)&&h(React.Fragment,null,
+    h('text',{x:10,y:12,fontSize:8,fill:'#fca5a5',fontWeight:700,opacity:0.85},'\u25b6 Preparatory phase (steps 1\u20135): \u22122 ATP'),
+    h('text',{x:10,y:228,fontSize:8,fill:'#86efac',fontWeight:700,opacity:0.85},'\u25b6 Pay-off phase (steps 6\u201310): +4 ATP, +2 NADH')
+  );
+  var sg=cs===0&&h('g',{className:'glow'},h(MolM,{type:'glucose',x:L[1].sx,y:L[1].sy}),h('text',{x:L[1].sx,y:L[1].sy+16,textAnchor:'middle',fontSize:5.5,fill:'#94a3b8',fontWeight:600},'Glucose'));
+  var doneEls=Array.from(done).sort(function(a,b){return a-b;}).map(function(sid){
+    var sdd=STEPS[sid-1],lay=L[sid],isCur=sid===cs;
+    var mx=(lay.sx+lay.px)/2,my=lay.vert?(lay.sy+lay.py)/2-16:lay.sy-14;
+    var structHint=STRUCT_HINTS[sdd.prod];
+    return h('g',{key:sid},
+      sid===1&&h(React.Fragment,null,
+        h(MolM,{type:'glucose',x:lay.sx,y:lay.sy}),
+        h('text',{x:lay.sx,y:lay.sy+16,textAnchor:'middle',fontSize:5.5,fill:'#94a3b8',fontWeight:600},'Glucose'),
+        isCur&&STRUCT_HINTS['glucose']&&h('text',{x:lay.sx,y:lay.sy+23,textAnchor:'middle',fontSize:4.5,fill:'rgba(148,163,184,0.5)'},STRUCT_HINTS['glucose'])
+      ),
+      mkArrow(sid,lay),
+      h(EnzM,{name:sdd.enz,x:lay.ex,y:lay.ey,cls:isCur?'enz-appear':''}),
+      h(MolM,{type:sdd.prod,x:lay.px,y:lay.py,cls:isCur?'appear':''}),
+      h('text',{x:lay.px,y:lay.py+16,textAnchor:'middle',fontSize:5.5,fill:'#94a3b8',fontWeight:600},MOLS[sdd.prod].ab),
+      isCur&&structHint&&h('text',{x:lay.px,y:lay.py+23,textAnchor:'middle',fontSize:4.5,fill:'rgba(148,163,184,0.45)'},structHint),
+      sdd.atp!==0&&h('text',{x:mx,y:my,textAnchor:'middle',fontSize:6.5,fontWeight:700,fill:sdd.atp>0?'#4ade80':'#f87171'},(sdd.atp>0?'+':'')+sdd.atp+' ATP'),
+      sdd.nadh>0&&h('text',{x:mx,y:my+(sdd.atp!==0?8:0),textAnchor:'middle',fontSize:6.5,fontWeight:700,fill:'#22d3ee'},'+'+sdd.nadh+' NADH')
+    );
+  });
+
+  var practEl=null;
+  if(mode==='practice'&&cs>0&&!done.has(cs)){
+    var lay=L[cs];
+    var emx=(lay.sx+lay.px)/2,emy=lay.vert?(lay.sy+lay.py)/2-16:lay.sy-14;
+    /* FIX 6: pulsing connector from left edge of SVG to enzyme slot when item selected */
+    var selConnector=selEnz&&!curPst.enzymeCorrect
+      ?h('line',{x1:2,y1:lay.ey,x2:lay.ex-22,y2:lay.ey,stroke:'#4ade80',strokeWidth:1.5,strokeDasharray:'4,3',style:{animation:'connPulse 1s infinite'}})
+      :null;
+    var selProdConnector=selProd&&curPst.enzymeCorrect&&!curPst.productCorrect
+      ?h('line',{x1:2,y1:lay.py,x2:lay.px-16,y2:lay.py,stroke:'#4ade80',strokeWidth:1.5,strokeDasharray:'4,3',style:{animation:'connPulse 1s infinite'}})
+      :null;
+    var enzSlot=curPst.enzymeCorrect
+      ?h(EnzM,{name:sd?sd.enz:'',x:lay.ex,y:lay.ey,cls:'enz-appear'})
+      :h('g',{onClick:submitEnz,style:{cursor:selEnz?'pointer':'default'}},
+          h('ellipse',{cx:lay.ex,cy:lay.ey,rx:20,ry:8.5,fill:selEnz?'rgba(74,222,128,.15)':'rgba(251,191,36,.1)',stroke:selEnz?'#4ade80':'#fbbf24',strokeWidth:1.2,strokeDasharray:'3,2'}),
+          h('text',{x:lay.ex,y:lay.ey+3,textAnchor:'middle',fontSize:6,fill:selEnz?'#4ade80':'#fbbf24',fontWeight:700},selEnz?'Confirm!':'Enzyme?')
+        );
+    var prodSlot=curPst.productCorrect
+      ?h('g',{className:'appear'},h(MolM,{type:sd?sd.prod:'',x:lay.px,y:lay.py}),h('text',{x:lay.px,y:lay.py+16,textAnchor:'middle',fontSize:5.5,fill:'#94a3b8',fontWeight:600},sd?MOLS[sd.prod].ab:''))
+      :curPst.enzymeCorrect
+        ?h('g',{onClick:submitProd,style:{cursor:selProd?'pointer':'default'}},
+            h('rect',{x:lay.px-14,y:lay.py-10,width:28,height:20,rx:3,fill:selProd?'rgba(74,222,128,.15)':'rgba(251,191,36,.1)',stroke:selProd?'#4ade80':'#fbbf24',strokeWidth:1.2,strokeDasharray:'3,2'}),
+            h('text',{x:lay.px,y:lay.py+3,textAnchor:'middle',fontSize:6,fill:selProd?'#4ade80':'#fbbf24',fontWeight:700},selProd?'Confirm!':'Product?')
+          )
+        :null;
+    practEl=h('g',null,
+      cs===1&&h('g',{className:'glow'},h(MolM,{type:'glucose',x:lay.sx,y:lay.sy}),h('text',{x:lay.sx,y:lay.sy+16,textAnchor:'middle',fontSize:5.5,fill:'#94a3b8',fontWeight:600},'Glucose')),
+      mkArrow(cs,lay,curPst.enzymeCorrect?1:0.3),
+      selConnector,selProdConnector,
+      enzSlot,prodSlot,
+      sd&&curPst.enzymeCorrect&&sd.atp!==0&&h('text',{x:emx,y:emy,textAnchor:'middle',fontSize:6.5,fontWeight:700,fill:sd.atp>0?'#4ade80':'#f87171'},(sd.atp>0?'+':'')+sd.atp+' ATP'),
+      sd&&curPst.enzymeCorrect&&sd.nadh>0&&h('text',{x:emx,y:emy+(sd.atp!==0?8:0),textAnchor:'middle',fontSize:6.5,fontWeight:700,fill:'#22d3ee'},'+'+sd.nadh+' NADH')
+    );
+  }
+  /* Phase boundary — sits between prep rows (y=45) and payoff rows (y=122) */
+  var phaseBoundary=cs>0&&h('g',null,
+    h('line',{x1:10,y1:90,x2:355,y2:90,stroke:'rgba(148,163,184,0.15)',strokeWidth:0.8,strokeDasharray:'4,3'}),
+    h('text',{x:12,y:84,fontSize:6,fill:'rgba(252,165,165,0.5)',fontWeight:700,textAnchor:'start'},'\u25b6 Preparatory (steps 1\u20135)'),
+    h('text',{x:12,y:98,fontSize:6,fill:'rgba(134,239,172,0.5)',fontWeight:700,textAnchor:'start'},'\u25b6 Pay-off (steps 6\u201310)')
+  );
+
+  var svgEl=h('svg',{viewBox:'0 0 365 238'},svgDefs,phaseBoundary,flowGuides,phLabels,sg,doneEls,stepAnim,practEl);
+
+  var dots=STEPS.map(function(s){
+    var dotTitle=mode==='practice'
+      ?'Step '+s.id+(done.has(s.id)?' \u2713 completed':s.id===cs?' \u25b6 current':' \u25cb complete this step to see details')
+      :'Step '+s.id+': '+s.title+' ('+s.enz+') \u2014 click to jump';
+    return h('div',{key:s.id,
+      className:cx('prog-dot',done.has(s.id)&&'done',s.id===cs&&'now',!s.rev&&'irrev'),
+      onClick:function(){if(mode==='learn')jumpTo(s.id);},
+      style:{cursor:mode==='learn'?'pointer':'default'},
+      title:dotTitle
+    });
+  });
+  var allDone=done.size>=10;
+
+  /* FIX 4: subtle tip strip once all steps done */
+  var compareTip=mode==='learn'&&allDone&&!showCompare&&h('div',{className:'compare-tip'},'\u2728 Tip: ',h('strong',null,'Compare Steps'),' is now unlocked \u2014 click the purple button to compare any two steps side by side.');
+
+  var ctls=[
+    /* LEFT: secondary/destructive */
+    h('button',{key:'hm',className:'btn',style:{borderColor:'rgba(148,163,184,.4)'},onClick:function(){startMode('welcome');},title:'Return to mode selection'},'\u2190 Menu'),
+    h('div',{key:'rs',style:{display:'flex',alignItems:'center',gap:4}},h('button',{className:'btn',onClick:function(){setConfirmReset(!confirmReset);}},'↺ Reset'),confirmReset&&h('span',{style:{display:'flex',alignItems:'center',gap:4,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.4)',borderRadius:8,padding:'4px 8px',fontSize:11}},h('span',{style:{color:'var(--amber)',fontWeight:700,marginRight:2}},'⚠ Sure?'),h('button',{className:'btn',style:{padding:'2px 10px',fontSize:11,background:'var(--red)',borderColor:'var(--red)',color:'#fff'},onClick:function(){setConfirmReset(false);startMode(mode);}},'✓ Yes'),h('button',{className:'btn',style:{padding:'2px 10px',fontSize:11},onClick:function(){setConfirmReset(false);}},'✕ Cancel'))),
+    h('button',{key:'hp',className:'btn',onClick:function(){setShowHelp(true);}},mode==='practice'?'\u2753 How to Play':'\u2753 Help'),
+    /* MIDDLE: secondary features */
+    allDone&&h('button',{key:'sm',className:'btn',onClick:function(){setShowSum(true);}},'\ud83d\udcca Summary'),
+    allDone&&mode==='learn'&&cs>1&&h('button',{key:'cmp',className:'btn',style:{borderColor:'rgba(167,139,250,.4)',color:'#a78bfa'},onClick:function(){setShowCompare(!showCompare);setCompareStep(cs>1?cs-1:null);}},showCompare?'\u2194 Hide Compare':'\u2194 Compare Steps'),
+    mode==='practice'&&streak>=3&&h('div',{key:'str',className:'streak-badge',title:'Consecutive correct answers without hints or reveals'},'\ud83d\udd25 '+streak+' streak'),
+    mode==='practice'&&h('label',{key:'hi',className:'hint-ctrl'},h('input',{type:'checkbox',checked:hints,onChange:function(ev){setHints(ev.target.checked);}}),'\ud83d\udca1 Hints'),
+    /* SPACER */
+    h('div',{key:'sp',style:{flex:1}}),
+    /* RIGHT: theme toggle + primary action */
+    h('button',{key:'tm',className:'theme-btn',title:theme==='dark'?'Switch to light mode':'Switch to dark mode',onClick:function(){setTheme(theme==='dark'?'light':'dark');}},theme==='dark'?'Light mode':'Dark mode'),
+    mode==='learn'&&h('button',{key:'bk',className:'btn',onClick:goBack,disabled:cs<=1},'\u25c4 Back'),
+    mode==='learn'&&h('button',{key:'nx',className:'btn primary',onClick:advance},cs===0?'Start \u2192':cs<10?'Next Step \u2192':'\ud83c\udf89 Finish!'),
+    mode==='practice'&&cs===0&&h('button',{key:'st',className:'btn primary',onClick:function(){setCs(1);}},'Start \u2192'),
+    mode==='practice'&&stepOk&&h('button',{key:'pn',className:'btn primary',onClick:practNext,disabled:!!misconceptionMsg},cs<10?'Next \u2192':'\ud83c\udf89 Finish!')
+  ].filter(Boolean);
+
+  var comparePanel=null;
+  if(showCompare&&allDone&&cs>1&&mode==='learn'){
+    var stepA=compareStep&&STEPS[compareStep-1]?STEPS[compareStep-1]:STEPS[cs-2];
+    var stepB=STEPS[cs-1];
+    if(stepA&&stepB){
+      var cpRows=[
+        {label:'Title',a:stepA.title,b:stepB.title},
+        {label:'Enzyme',a:stepA.enzFull,b:stepB.enzFull},
+        {label:'Carbons',a:stepA.subC+' \u2192 '+stepA.prodC,b:stepB.subC+' \u2192 '+stepB.prodC},
+        {label:'Energy',a:(stepA.atp!==0?(stepA.atp>0?'+':'')+stepA.atp+' ATP':stepA.nadh>0?'+'+stepA.nadh+' NADH':'\u2014'),b:(stepB.atp!==0?(stepB.atp>0?'+':'')+stepB.atp+' ATP':stepB.nadh>0?'+'+stepB.nadh+' NADH':'\u2014')},
+        {label:'Reversible',a:stepA.rev?'Yes':'No',b:stepB.rev?'Yes':'No'},
+        {label:'Phase',a:stepA.phase==='prep'?'Preparatory':'Pay-off',b:stepB.phase==='prep'?'Preparatory':'Pay-off'}
+      ];
+      var cpStepBtns=[1,2,3,4,5,6,7,8,9,10].filter(function(n){return n!==cs;}).map(function(n){
+        return h('button',{key:n,className:'btn',style:{padding:'2px 7px',fontSize:11,background:compareStep===n?'rgba(167,139,250,.25)':'',borderColor:compareStep===n?'#a78bfa':''},onClick:function(){setCompareStep(n);}},n);
+      });
+      var cpTableRows=cpRows.map(function(row,i){
+        var same=row.a===row.b;
+        return h('tr',{key:row.label,style:{background:i%2===0?'transparent':'rgba(255,255,255,.02)'}},
+          h('td',{style:{padding:'4px 7px',fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'1px',whiteSpace:'nowrap'}},row.label),
+          h('td',{style:{padding:'4px 7px',color:same?'var(--muted)':'var(--text)'}},row.a),
+          h('td',{style:{padding:'4px 7px',color:same?'var(--muted)':'var(--text)',background:same?'':'rgba(34,211,238,.04)'}},row.b)
+        );
+      });
+      comparePanel=h('div',{style:{padding:'10px 20px',background:'rgba(167,139,250,.05)',borderTop:'1px solid rgba(167,139,250,.15)',overflowX:'auto',flexShrink:0}},
+        h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}},
+          h('div',{style:{fontSize:11,fontWeight:700,color:'var(--accent)',letterSpacing:'1.5px',textTransform:'uppercase'}},'Step Comparison'),
+          h('div',{style:{display:'flex',gap:4,alignItems:'center'}},
+            h('span',{style:{fontSize:11,color:'var(--muted)',marginRight:4}},'Compare with:'),
+            cpStepBtns
+          )
+        ),
+        h('table',{style:{width:'100%',borderCollapse:'collapse',fontSize:11}},
+          h('thead',null,
+            h('tr',null,
+              h('th',{style:{width:'22%',padding:'5px 7px',textAlign:'left',fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'1px',textTransform:'uppercase',borderBottom:'1px solid var(--border)'}},''),
+              h('th',{style:{width:'39%',padding:'5px 7px',textAlign:'left',fontSize:11,fontWeight:700,color:'#a78bfa',borderBottom:'1px solid var(--border)'}},'Step '+stepA.id),
+              h('th',{style:{width:'39%',padding:'5px 7px',textAlign:'left',fontSize:11,fontWeight:700,color:'var(--accent)',borderBottom:'1px solid var(--border)'}},'Step '+stepB.id)
+            )
+          ),
+          h('tbody',null,cpTableRows)
+        )
+      );
+    }
+  }
+
+  return h('div',{className:'app'+(theme==='light'?' light-mode':'')},
+    helpOv,showSum&&summaryOverlay(),
+    /* Desktop left sidebar */
+    h('div',{className:'sidebar'},h('div',{className:'sb-head'},'\u2697 Enzymes'),h('div',{className:'sb-body'},enzList)),
+    h('div',{style:{display:'flex',flex:1,overflow:'hidden',flexDirection:'column'}},
+      /* Mobile tab bar */
+      h('div',{className:'mob-tabs'},
+        h('button',{className:'mob-tab'+(mobTab==='enz'?' active':''),onClick:function(){setMobTab(mobTab==='enz'?null:'enz');}},'\u2697 Enzymes'),
+        h('button',{className:'mob-tab'+(mobTab==='prod'?' active':''),onClick:function(){setMobTab(mobTab==='prod'?null:'prod');}},'\ud83e\uddec Products'),
+        h('button',{className:'mob-tab',onClick:function(){setShowHelp(true);}},'\u2753 Help')
+      ),
+      h('div',{className:'mob-panel'+(mobTab==='enz'?' open':'')},
+        enzKeys.map(function(name){
+          var data=ENZS[name];
+          var isUsed=Array.from(done).some(function(s){return STEPS[s-1]&&STEPS[s-1].enz===name;});
+          var isSel=selEnz===name;
+          var isHint=hints&&mode==='practice'&&cs>0&&sd&&name===sd.enz&&!curPst.enzymeCorrect;
+          return h('div',{key:name,className:cx('mob-item',isUsed&&'used',isSel&&'selected',isHint&&'highlight',shk===name&&'shake'),
+            onClick:function(){
+              if(mode==='practice'&&!isUsed&&!curPst.enzymeCorrect&&cs>0){
+                setSelEnz(name);
+                /* On mobile: brief 250ms visual before auto-submit */
+                var capturedName=name;
+                setTimeout(function(){
+                var ok=capturedName===sd.enz;
+                var att=(curPst.attempts||0)+1;
+                setPst(function(prev){var n=Object.assign({},prev);n[cs]=Object.assign({},prev[cs],{enzymeCorrect:ok,attempts:att});return n;});
+                if(ok){setMisconceptionMsg(null);showT('ok','\u2713 Correct! Now pick the product.');setProdFlash(function(v){return v+1;});setMobTab('prod');}
+                else{setShk(name);setTimeout(function(){setShk(null);},300);setMisconceptionMsg(sd.misconception);}
+                setSelEnz(null);
+                },250);
+              }
+            }},name);
+        })
+      ),
+      h('div',{className:'mob-panel'+(mobTab==='prod'?' open':'')},
+        (mode==='practice'?prodOrder:Object.keys(MOLS).filter(function(k){return k!=='glucose';})).map(function(key){
+          var mol=MOLS[key];
+          var isUsed=Array.from(done).some(function(s){return STEPS[s-1]&&STEPS[s-1].prod===key;});
+          var isSel=selProd===key;
+          var isHint=hints&&mode==='practice'&&cs>0&&sd&&key===sd.prod&&curPst.enzymeCorrect&&!curPst.productCorrect;
+          var isDis=mode==='practice'&&(!curPst.enzymeCorrect||cs===0);
+          return h('div',{key:key,className:cx('mob-item',isUsed&&'used',isSel&&'selected',isHint&&'highlight',isDis&&'disabled'),
+            onClick:function(){
+              if(!isDis&&!isUsed&&mode==='practice'){
+                /* On mobile: auto-submit immediately on tap */
+                var ok=key===sd.prod;
+                if(ok){
+                  setPst(function(prev){var n=Object.assign({},prev);n[cs]=Object.assign({},prev[cs],{productCorrect:true});return n;});
+                  setDone(function(prev){return new Set([].concat(Array.from(prev),[cs]));});
+                  if(sd.atp!==0)setLc('atp');if(sd.nadh>0)setLc('nadh');
+                  setTimeout(function(){setLc(null);},600);setStreak(function(s){return s+1;});
+                  if(sd.atp!==0){setAtpFloat({val:(sd.atp>0?'+':'')+sd.atp+' ATP',pos:sd.atp>0});setTimeout(function(){setAtpFloat(null);},900);}
+                  showT('ok','\u2713 Correct! Tap Next \u2192');
+                  setMobTab(null);
+                } else {
+                  setShk(key);setTimeout(function(){setShk(null);},300);setStreak(0);showT('err','\u2717 Wrong \u2014 try again');
+                }
+                setSelProd(null);
+              }
+            }},mol.ab);
+        })
+      ),
+      /* Main content row */
+      h('div',{style:{display:'flex',flex:1,overflow:'hidden'}},
+        h('div',{className:'center',style:{flex:1}},
+          banner,drawerToggle,drawer,
+          mode==='practice'&&practStrip,
+          misconceptionPanel,
+          h('div',{className:'play-area'},stepQuizOv,svgEl,
+            toast&&h('div',{className:'toast '+toast.t},toast.m),
+            atpFloat&&h('div',{style:{top:'20%',position:'absolute',left:'50%',transform:'translateX(-50%)',fontSize:13,fontWeight:700,fontFamily:'var(--mono)',pointerEvents:'none',animation:'floatUp .9s ease-out forwards',color:atpFloat.pos?'var(--green)':'var(--red)'}},atpFloat.val)
+          ),
+          h('div',{className:'progress-bar'},h('span',{className:'prog-label'},'Steps'),h('div',{className:'prog-dots'},dots),h('span',{className:'prog-label'},cs+'/10'),mode==='learn'&&cs>0&&h('span',{style:{fontSize:11,color:'var(--muted)',marginLeft:8,flexShrink:0}},'click dots to jump \u00b7 \u21cc = reversible \u00b7 \u2192 = irreversible (1,3,4,10)')),
+          compareTip,
+          h('div',{className:'controls'},ctls),
+          comparePanel
+        ),
+        /* Desktop right products panel */
+        h('div',{className:'desktop-products',style:{width:195,background:'var(--panel)',borderLeft:'1px solid var(--border)',display:'flex',flexDirection:'column',overflow:'hidden',flexShrink:0}},
+          h('div',{key:'ph-'+prodFlash,className:'sb-head'+(mode==='practice'&&curPst.enzymeCorrect&&!curPst.productCorrect?' flash':'')},'\ud83e\uddec Products'),
+          h('div',{className:'sb-body'},makeProdList())
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App,null));
+</script>
+</body>
+</html>
